@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Lista Discenti</h2>
+
+    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Torna alla Dashboard</a>
+    <a href="{{ url_for('discenti.aggiungi_discente') }}" class="btn btn-success">Aggiungi Discente</a>
+
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Cognome</th>
+                <th>Progetto</th>
+                <th>Corsi Iscritti</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for discente in discenti %}
+            <tr>
+                <td>{{ discente.nome }}</td>
+                <td>{{ discente.cognome }}</td>
+                <td>{{ discente.progetto.nome if discente.progetto else 'Nessun progetto' }}</td>
+                <td>
+                    {% for iscrizione in discente.iscrizioni %}
+                        {{ iscrizione.corso.nome }}<br>
+                    {% endfor %}
+                </td>
+                <td>
+                    <form action="{{ url_for('discenti.elimina_discente', id=discente.id) }}" method="POST">
+                        <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

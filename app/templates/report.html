@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Corsi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Report Corsi</h2>
+        
+        <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary mb-3">Torna alla Dashboard</a>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome Corso</th>
+                    <th>Numero Iscritti</th>
+                    <th>Ore Totali</th>
+                    <th>Percentuale Completamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in report_dati %}
+                <tr>
+                    <td>{{ report.nome_corso }}</td>
+                    <td>{{ report.numero_iscritti }}</td>
+                    <td>{{ report.ore_totali }}</td>
+                    <td>{{ report.percentuale_completamento }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

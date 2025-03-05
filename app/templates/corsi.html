@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Lista Corsi</h2>
+
+    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Torna alla Dashboard</a>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Docente</th>
+                <th>Ore Totali</th>
+                <th>Progetto Associato</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for corso in corsi %}
+            <tr>
+                <td>{{ corso.nome }}</td>
+                <td>{{ corso.docente }}</td>
+                <td>{{ corso.ore_totali }}</td>
+                <td>{{ corso.progetto.nome if corso.progetto else 'Nessun progetto' }}</td>
+                <td>
+                    <form action="{{ url_for('corsi.elimina_corso', id=corso.id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Aggiungi Nuovo Corso</h3>
+    <form action="{{ url_for('corsi.aggiungi_corso') }}" method="POST">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome Corso</label>
+            <input type="text" class="form-control" id="nome" name="nome" required>
+        </div>
+        <div class="mb-3">
+            <label for="docente" class="form-label">Docente</label>
+            <input type="text" class="form-control" id="docente" name="docente" required>
+        </div>
+        <div class="mb-3">
+            <label for="ore_totali" class="form-label">Ore Totali</label>
+            <input type="number" class="form-control" id="ore_totali" name="ore_totali" required>
+        </div>
+        <div class="mb-3">
+            <label for="progetto_id" class="form-label">Progetto</label>
+            <select class="form-control" id="progetto_id" name="progetto_id" required>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}">{{ progetto.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Aggiungi</button>
+    </form>
+</div>
+{% endblock %}

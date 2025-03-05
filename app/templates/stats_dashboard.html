@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Statistiche</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Dashboard Statistiche Presenze</h2>
+
+        <canvas id="presenzeChart"></canvas>
+
+        <script>
+            async function caricaDatiPresenze() {
+                const response = await fetch("{{ url_for('stats_dashboard.dati_presenze') }}");
+                const data = await response.json();
+
+                const corsi = [...new Set(data.map(d => d.corso))];
+                const discenti = [...new Set(data.map(d => d.discente))];
+
+                const datasets = discenti.map(discente => ({
+                    label: discente,
+                    data: corsi.map(corso => {
+                        const record = data.find(d => d.corso === corso && d.discente === discente);
+                        return record ? record.percentuale_presenza : 0;
+                    }),
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }));
+
+                const ctx = document.getElementById("presenzeChart").getContext("2d");
+                new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: corsi,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: "top" },
+                            title: { display: true, text: "Percentuale di Presenza per Corso" }
+                        }
+                    }
+                });
+            }
+
+            caricaDatiPresenze();
+        </script>
+    </div>
+</body>
+</html>
