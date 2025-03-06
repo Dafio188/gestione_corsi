@@ -12,6 +12,12 @@
             <tr>
                 <th>Nome</th>
                 <th>Cognome</th>
+                <th>Codice Fiscale</th>
+                <th>Genere</th>
+                <th>Fascia Età</th>
+                <th>Ruolo</th>
+                <th>Email</th>
+                <th>Cellulare</th>
                 <th>Progetto</th>
                 <th>Corsi Iscritti</th>
                 <th>Azioni</th>
@@ -22,14 +28,24 @@
             <tr>
                 <td>{{ discente.nome }}</td>
                 <td>{{ discente.cognome }}</td>
+                <td>{{ discente.codice_fiscale }}</td>
+                <td>{{ discente.genere }}</td>
+                <td>{{ discente.fascia_eta }}</td>
+                <td>{{ discente.ruolo }}</td>
+                <td>{{ discente.email }}</td>
+                <td>{{ discente.cellulare }}</td>
                 <td>{{ discente.progetto.nome if discente.progetto else 'Nessun progetto' }}</td>
                 <td>
-                    {% for iscrizione in discente.iscrizioni %}
-                        {{ iscrizione.corso.nome }}<br>
+                    {% for corso in discente.corsi %}
+                        {{ corso }}<br>
                     {% endfor %}
                 </td>
                 <td>
-                    <form action="{{ url_for('discenti.elimina_discente', id=discente.id) }}" method="POST">
+                    <!-- Bottone per Modifica -->
+                    <a href="{{ url_for('discenti.modifica_discente', id=discente.id) }}" class="btn btn-warning btn-sm">Modifica</a>
+
+                    <!-- Bottone per Eliminare -->
+                    <form action="{{ url_for('discenti.elimina_discente', id=discente.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
                     </form>
                 </td>

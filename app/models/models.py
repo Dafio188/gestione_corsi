@@ -34,8 +34,7 @@ class Progetto(db.Model):
     inizio_progetto = db.Column(db.Date)
     fine_progetto = db.Column(db.Date)
 
-    # Relazione con Corsi (un progetto ha più corsi)
-    corsi = db.relationship('Corso', backref='progetto_associazione', lazy=True)  # 🔄 Cambiato backref in 'progetto_associazione'
+    corsi = db.relationship('Corso', backref='progetto', lazy=True, overlaps="progetto_associazione")
 
 class Corso(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,8 +44,8 @@ class Corso(db.Model):
     ore_totali = db.Column(db.Integer, nullable=False)
     progetto_id = db.Column(db.Integer, db.ForeignKey('progetto.id'), nullable=False)
 
-    # Cambiato backref per evitare conflitto con 'Progetto.corsi'
-    progetto = db.relationship('Progetto', backref='lista_corsi')  # 🔄 Rinominato 'progetto' in 'lista_corsi'
+    test_risultati = db.relationship('TestRisultato', back_populates='corso_test', lazy=True)
+
 
 class Discente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -58,8 +57,11 @@ class Discente(db.Model):
     ruolo = db.Column(db.String(100))
     email = db.Column(db.String(100), unique=True, nullable=False)
     cellulare = db.Column(db.String(20))
-
     progetto_id = db.Column(db.Integer, db.ForeignKey('progetto.id'), nullable=False)
+
+    # 🔹 Aggiunto il collegamento con Iscrizione per accedere direttamente ai corsi
+    iscrizioni = db.relationship('Iscrizione', backref='discente', lazy=True)
+    progetto = db.relationship('Progetto', backref='discenti')
 
 class Iscrizione(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,3 +70,17 @@ class Iscrizione(db.Model):
     ore_frequentate = db.Column(db.Integer, default=0)
     test_superato = db.Column(db.Boolean, default=False)
     punteggio_test = db.Column(db.Integer, default=0)
+    corso = db.relationship('Corso', backref='iscrizioni')
+
+# Nuova tabella per salvare i risultati dei test
+class TestRisultato(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
+    corso_id = db.Column(db.Integer, db.ForeignKey('corso.id'), nullable=False)
+    punteggio_ottenuto = db.Column(db.Integer, nullable=False)
+    superato = db.Column(db.Boolean, nullable=False)
+
+    # Relazioni con discente e corso
+    discente = db.relationship('Discente', backref=db.backref('test_risultati', lazy=True))
+    corso_test = db.relationship('Corso', back_populates='test_risultati', lazy=True)
+

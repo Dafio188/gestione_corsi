@@ -24,6 +24,10 @@
                 <td>{{ corso.ore_totali }}</td>
                 <td>{{ corso.progetto.nome if corso.progetto else 'Nessun progetto' }}</td>
                 <td>
+                    <!-- Pulsante Modifica -->
+                    <a href="{{ url_for('corsi.modifica_corso', id=corso.id) }}" class="btn btn-warning btn-sm">Modifica</a>
+                    
+                    <!-- Pulsante Elimina -->
                     <form action="{{ url_for('corsi.elimina_corso', id=corso.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
                     </form>

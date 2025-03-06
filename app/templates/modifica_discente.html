@@ -1,91 +1,82 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modifica Discente</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>Modifica Discente</h1>
-    <form action="{{ url_for('modifica_discente', id=discente[0]) }}" method="POST">
-        <label for="nome">Nome:</label>
-        <input type="text" id="nome" name="nome" value="{{ discente[1] }}" required>
-        <label for="cognome">Cognome:</label>
-        <input type="text" id="cognome" name="cognome" value="{{ discente[2] }}" required>
-        <label for="cod_fiscale">Codice Fiscale:</label>
-        <input type="text" id="cod_fiscale" name="cod_fiscale" value="{{ discente[3] }}" required>
-        <label for="genere">Genere:</label>
-        <select id="genere" name="genere" required>
-            <option value="Uomo" {% if discente[4] == "Uomo" %}selected{% endif %}>Uomo</option>
-            <option value="Donna" {% if discente[4] == "Donna" %}selected{% endif %}>Donna</option>
-            <option value="Altro" {% if discente[4] == "Altro" %}selected{% endif %}>Altro</option>
-        </select>
-        <label for="fascia_eta">Fascia d'Età:</label>
-        <select id="fascia_eta" name="fascia_eta" required>
-            <option value="18-29" {% if discente[5] == "18-29" %}selected{% endif %}>18-29</option>
-            <option value="30-54" {% if discente[5] == "30-54" %}selected{% endif %}>30-54</option>
-            <option value="55+" {% if discente[5] == "55+" %}selected{% endif %}>55+</option>
-        </select>
-        <label for="ruolo_interno">Ruolo Interno:</label>
-        <input type="text" id="ruolo_interno" name="ruolo_interno" value="{{ discente[6] }}">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" value="{{ discente[7] }}">
-        <label for="cellulare">Cellulare:</label>
-        <input type="text" id="cellulare" name="cellulare" value="{{ discente[8] }}">
-        <label for="progetto_id">Progetto:</label>
-        <select id="progetto_id" name="progetto_id" required>
-            {% for progetto in progetti %}
-                <option value="{{ progetto[0] }}" {% if progetto[0] == discente[9] %}selected{% endif %}>{{ progetto[1] }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Salva Modifiche</button>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Modifica Discente</h2>
+
+    <form action="{{ url_for('discenti.modifica_discente', id=discente.id) }}" method="POST" class="needs-validation">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome:</label>
+            <input type="text" class="form-control" id="nome" name="nome" value="{{ discente.nome }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="cognome" class="form-label">Cognome:</label>
+            <input type="text" class="form-control" id="cognome" name="cognome" value="{{ discente.cognome }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="codice_fiscale" class="form-label">Codice Fiscale:</label>
+            <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" value="{{ discente.codice_fiscale }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="genere" class="form-label">Genere:</label>
+            <select class="form-control" id="genere" name="genere" required>
+                <option value="Uomo" {% if discente.genere == "Uomo" %}selected{% endif %}>Uomo</option>
+                <option value="Donna" {% if discente.genere == "Donna" %}selected{% endif %}>Donna</option>
+                <option value="Altro" {% if discente.genere == "Altro" %}selected{% endif %}>Altro</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="fascia_eta" class="form-label">Fascia d'Età:</label>
+            <select class="form-control" id="fascia_eta" name="fascia_eta" required>
+                <option value="18-29" {% if discente.fascia_eta == "18-29" %}selected{% endif %}>18-29</option>
+                <option value="30-54" {% if discente.fascia_eta == "30-54" %}selected{% endif %}>30-54</option>
+                <option value="55+" {% if discente.fascia_eta == "55+" %}selected{% endif %}>55+</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="ruolo" class="form-label">Ruolo Interno:</label>
+            <input type="text" class="form-control" id="ruolo" name="ruolo" value="{{ discente.ruolo }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ discente.email }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="cellulare" class="form-label">Cellulare:</label>
+            <input type="text" class="form-control" id="cellulare" name="cellulare" value="{{ discente.cellulare }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="progetto_id" class="form-label">Progetto:</label>
+            <select class="form-control" id="progetto_id" name="progetto_id" required>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}" {% if progetto.id == discente.progetto_id %}selected{% endif %}>
+                        {{ progetto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="corsi_ids" class="form-label">Corsi Iscritti:</label>
+            <select class="form-control" id="corsi_ids" name="corsi_ids" multiple required>
+                {% for corso in corsi %}
+                    <option value="{{ corso.id }}" {% if corso.id in corsi_selezionati %}selected{% endif %}>
+                        {{ corso.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+        <a href="{{ url_for('discenti.lista_discenti') }}" class="btn btn-secondary">Annulla</a>
     </form>
-    <a href="{{ url_for('discenti') }}">Torna alla Gestione Discenti</a>
-</body>
-</html><!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modifica Discente</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>Modifica Discente</h1>
-    <form action="{{ url_for('modifica_discente', id=discente[0]) }}" method="POST">
-        <label for="nome">Nome:</label>
-        <input type="text" id="nome" name="nome" value="{{ discente[1] }}" required>
-        <label for="cognome">Cognome:</label>
-        <input type="text" id="cognome" name="cognome" value="{{ discente[2] }}" required>
-        <label for="cod_fiscale">Codice Fiscale:</label>
-        <input type="text" id="cod_fiscale" name="cod_fiscale" value="{{ discente[3] }}" required>
-        <label for="genere">Genere:</label>
-        <select id="genere" name="genere" required>
-            <option value="Uomo" {% if discente[4] == "Uomo" %}selected{% endif %}>Uomo</option>
-            <option value="Donna" {% if discente[4] == "Donna" %}selected{% endif %}>Donna</option>
-            <option value="Altro" {% if discente[4] == "Altro" %}selected{% endif %}>Altro</option>
-        </select>
-        <label for="fascia_eta">Fascia d'Età:</label>
-        <select id="fascia_eta" name="fascia_eta" required>
-            <option value="18-29" {% if discente[5] == "18-29" %}selected{% endif %}>18-29</option>
-            <option value="30-54" {% if discente[5] == "30-54" %}selected{% endif %}>30-54</option>
-            <option value="55+" {% if discente[5] == "55+" %}selected{% endif %}>55+</option>
-        </select>
-        <label for="ruolo_interno">Ruolo Interno:</label>
-        <input type="text" id="ruolo_interno" name="ruolo_interno" value="{{ discente[6] }}">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" value="{{ discente[7] }}">
-        <label for="cellulare">Cellulare:</label>
-        <input type="text" id="cellulare" name="cellulare" value="{{ discente[8] }}">
-        <label for="progetto_id">Progetto:</label>
-        <select id="progetto_id" name="progetto_id" required>
-            {% for progetto in progetti %}
-                <option value="{{ progetto[0] }}" {% if progetto[0] == discente[9] %}selected{% endif %}>{{ progetto[1] }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Salva Modifiche</button>
-    </form>
-    <a href="{{ url_for('discenti') }}">Torna alla Gestione Discenti</a>
-</body>
-</html>
+</div>
+{% endblock %}
