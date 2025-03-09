@@ -13,6 +13,7 @@
                 <th>Docente</th>
                 <th>Ore Totali</th>
                 <th>Progetto Associato</th>
+                <th>Test</th>
                 <th>Azioni</th>
             </tr>
         </thead>
@@ -23,11 +24,63 @@
                 <td>{{ corso.docente }}</td>
                 <td>{{ corso.ore_totali }}</td>
                 <td>{{ corso.progetto.nome if corso.progetto else 'Nessun progetto' }}</td>
+                
+                <!-- Sezione Test -->
                 <td>
-                    <!-- Pulsante Modifica -->
+                    <!-- Caricamento test iniziale e finale -->
+                    <form action="{{ url_for('corsi.upload_test', corso_id=corso.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-2">
+                            <label class="form-label">Test Iniziale:</label>
+                            <input type="file" name="test_iniziale" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Test Finale:</label>
+                            <input type="file" name="test_finale" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-info btn-sm">Carica Test</button>
+                    </form>
+
+                    <!-- Link per scaricare i test -->
+                    {% if corso.test_iniziale %}
+                        <a href="{{ url_for('static', filename='uploads/tests/' + corso.test_iniziale) }}" target="_blank" class="btn btn-link btn-sm">Scarica Test Iniziale</a>
+                    {% endif %}
+                    {% if corso.test_finale %}
+                        <a href="{{ url_for('static', filename='uploads/tests/' + corso.test_finale) }}" target="_blank" class="btn btn-link btn-sm">Scarica Test Finale</a>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Caricamento test post-corso -->
+                    <form action="{{ url_for('corsi.upload_test_post', corso_id=corso.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-2">
+                            <label class="form-label">Test Post-Corso:</label>
+                            <input type="file" name="test_postcorso" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-sm">Carica Test Post-Corso</button>
+                    </form>
+
+                    <!-- Link per scaricare il test post-corso -->
+                    {% if corso.test_postcorso %}
+                        <a href="{{ url_for('static', filename='uploads/tests_post/' + corso.test_postcorso) }}" target="_blank" class="btn btn-link btn-sm">Scarica Test Post-Corso</a>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- 🔹 Pulsante per la compilazione del test post-corso (solo se il test è caricato) -->
+                    {% if corso.test_postcorso and current_user.is_authenticated %}
+                        <a href="{{ url_for('test.compila_test_post', corso_id=corso.id, discente_id=current_user.id) }}" 
+                           class="btn btn-success btn-sm">
+                            Compila Test Post-Corso
+                        </a>
+                    {% elif not current_user.is_authenticated %}
+                        <p class="text-danger">Devi essere autenticato per compilare il test.</p>
+                    {% endif %}
+                </td>
+
+                <!-- Pulsanti Azioni -->
+                <td>
                     <a href="{{ url_for('corsi.modifica_corso', id=corso.id) }}" class="btn btn-warning btn-sm">Modifica</a>
-                    
-                    <!-- Pulsante Elimina -->
+
                     <form action="{{ url_for('corsi.elimina_corso', id=corso.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
                     </form>

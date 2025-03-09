@@ -13,39 +13,34 @@
 
         <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Torna alla Dashboard</a>
 
-        <h3>Carica Test</h3>
-        <form action="{{ url_for('test.carica_test') }}" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="corso_id" class="form-label">Seleziona Corso</label>
-                <select class="form-control" id="corso_id" name="corso_id">
-                    {% for corso in corsi %}
-                        <option value="{{ corso.id }}">{{ corso.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="file" class="form-label">Seleziona File</label>
-                <input type="file" class="form-control" id="file" name="file" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Carica</button>
-        </form>
-
         <h3>Valuta Test</h3>
-        <form action="{{ url_for('test.valuta_test') }}" method="POST">
-            <div class="mb-3">
-                <label for="corso_id" class="form-label">Seleziona Corso</label>
-                <select class="form-control" id="corso_id" name="corso_id">
-                    {% for corso in corsi %}
-                        <option value="{{ corso.id }}">{{ corso.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="punteggio" class="form-label">Punteggio (%)</label>
-                <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
-            </div>
-            <button type="submit" class="btn btn-success">Valuta</button>
-        </form>
+<form action="{{ url_for('test.valuta_test') }}" method="POST">
+    <div class="mb-3">
+        <label for="corso_id" class="form-label">Seleziona Corso</label>
+        <select class="form-control" id="corso_id" name="corso_id">
+            {% for corso in corsi %}
+                <option value="{{ corso.id }}">{{ corso.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="discente_id" class="form-label">Seleziona Discente</label>
+        <select class="form-control" id="discente_id" name="discente_id">
+            {% for discente in discenti %}
+                <option value="{{ discente.id }}">{{ discente.nome }} {{ discente.cognome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="punteggio" class="form-label">Punteggio (%)</label>
+        <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Valuta</button>
+</form>
+
     </div>
 </body>
 </html>

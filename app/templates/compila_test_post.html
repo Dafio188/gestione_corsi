@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Compila il Test Post-Corso per {{ corso.nome }}</h2>
+    
+    <form action="{{ url_for('test.compila_test_post', corso_id=corso.id, discente_id=discente.id) }}" method="POST">
+        {% for domanda in domande %}
+        <div class="mb-3">
+            <label class="form-label"><strong>{{ domanda }}</strong></label>
+            <textarea class="form-control" name="risposte[]" rows="3" required></textarea>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">Invia Risposte</button>
+    </form>
+</div>
+{% endblock %}

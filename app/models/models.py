@@ -1,67 +1,80 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date  # Per gestire le date
+from datetime import date
+from flask_login import UserMixin
+from app.models import db  # Usa l'istanza del database esistente
+from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
-
-class Lezione(db.Model):
+class Progetto(db.Model):
+    __tablename__ = "progetto"
     id = db.Column(db.Integer, primary_key=True)
-    corso_id = db.Column(db.Integer, db.ForeignKey('corso.id'), nullable=False)
-    data_lezione = db.Column(db.Date, nullable=False)
-    orario = db.Column(db.String(50), nullable=False)  # Mattina/Pomeriggio
+    nome = db.Column(db.String(100), nullable=False)
+    descrizione = db.Column(db.Text, nullable=True)
+    ente = db.Column(db.String(100), nullable=True)
+    inizio_progetto = db.Column(db.Date, nullable=True)
+    fine_progetto = db.Column(db.Date, nullable=True)
 
-    corso = db.relationship('Corso', backref=db.backref('lezioni', lazy=True))
-
-class Presenza(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    lezione_id = db.Column(db.Integer, db.ForeignKey('lezione.id'), nullable=False)
-    discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
-    presente = db.Column(db.Boolean, default=False)
-
-    lezione = db.relationship('Lezione', backref=db.backref('presenze', lazy=True))
-    discente = db.relationship('Discente', backref=db.backref('presenze', lazy=True))
+    def __repr__(self):
+        return f"<Progetto {self.nome}>"
 
 class Attestato(db.Model):
+    __tablename__ = "attestato"
     id = db.Column(db.Integer, primary_key=True)
     nome_discente = db.Column(db.String(100), nullable=False)
     corso = db.Column(db.String(100), nullable=False)
     data_attestato = db.Column(db.Date, nullable=False)
 
-class Progetto(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    descrizione = db.Column(db.Text)
-    ente = db.Column(db.String(100))
-    inizio_progetto = db.Column(db.Date)
-    fine_progetto = db.Column(db.Date)
-
-    corsi = db.relationship('Corso', backref='progetto', lazy=True, overlaps="progetto_associazione")
+    def __repr__(self):
+        return f"<Attestato {self.nome_discente} - {self.corso}>"
 
 class Corso(db.Model):
+    __tablename__ = "corso"
     id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    descrizione = db.Column(db.Text)
+    nome = db.Column(db.String(255), nullable=False)
+    descrizione = db.Column(db.Text, nullable=True)
+    test_preliminare = db.Column(db.String(255), nullable=True)  # ✅ Test Iniziale
+    test_postcorso = db.Column(db.String(255), nullable=True)  # ✅ Test Finale
     docente = db.Column(db.String(100), nullable=False)
     ore_totali = db.Column(db.Integer, nullable=False)
     progetto_id = db.Column(db.Integer, db.ForeignKey('progetto.id'), nullable=False)
 
-    test_risultati = db.relationship('TestRisultato', back_populates='corso_test', lazy=True)
+    progetto = db.relationship('Progetto', backref=db.backref('corsi', lazy=True))
 
+    def __repr__(self):
+        return f"<Corso {self.nome}>"
 
-class Discente(db.Model):
+class RisultatiTestPostCorso(db.Model):
+    __tablename__ = "test_risultati_postcorso"
+    id = db.Column(db.Integer, primary_key=True)
+    discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
+    corso_id = db.Column(db.Integer, db.ForeignKey('corso.id'), nullable=False)
+    risposte = db.Column(db.JSON, nullable=False)
+    data_compilazione = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    discente = db.relationship('Discente', backref=db.backref('test_risultati_postcorso', lazy=True))
+    corso = db.relationship('Corso', backref=db.backref('test_risultati_postcorso', lazy=True))
+
+class Discente(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
-    cognome = db.Column(db.String(100), nullable=False)
+    cognome = db.Column(db.String(100), nullable=False)    
     codice_fiscale = db.Column(db.String(16), unique=True, nullable=False)
     genere = db.Column(db.String(10))
     fascia_eta = db.Column(db.String(50))
     ruolo = db.Column(db.String(100))
     email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)  # ✅ Campo per la password criptata
     cellulare = db.Column(db.String(20))
     progetto_id = db.Column(db.Integer, db.ForeignKey('progetto.id'), nullable=False)
 
-    # 🔹 Aggiunto il collegamento con Iscrizione per accedere direttamente ai corsi
-    iscrizioni = db.relationship('Iscrizione', backref='discente', lazy=True)
-    progetto = db.relationship('Progetto', backref='discenti')
+    progetto = db.relationship('Progetto', backref=db.backref('discenti', lazy=True))
+
+    # ✅ Metodo per impostare la password in modo sicuro
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # ✅ Metodo per verificare la password inserita rispetto a quella salvata
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)  # 🔹 Qui c'era un errore di troncamento
 
 class Iscrizione(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -70,9 +83,10 @@ class Iscrizione(db.Model):
     ore_frequentate = db.Column(db.Integer, default=0)
     test_superato = db.Column(db.Boolean, default=False)
     punteggio_test = db.Column(db.Integer, default=0)
-    corso = db.relationship('Corso', backref='iscrizioni')
 
-# Nuova tabella per salvare i risultati dei test
+    discente = db.relationship('Discente', backref=db.backref('iscrizioni', lazy=True))
+    corso = db.relationship('Corso', backref=db.backref('iscrizioni', lazy=True))
+
 class TestRisultato(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
@@ -80,7 +94,22 @@ class TestRisultato(db.Model):
     punteggio_ottenuto = db.Column(db.Integer, nullable=False)
     superato = db.Column(db.Boolean, nullable=False)
 
-    # Relazioni con discente e corso
     discente = db.relationship('Discente', backref=db.backref('test_risultati', lazy=True))
-    corso_test = db.relationship('Corso', back_populates='test_risultati', lazy=True)
+    corso_test = db.relationship('Corso', backref=db.backref('test_risultati', lazy=True))
 
+class Lezione(db.Model):
+    __tablename__ = "lezione"
+    id = db.Column(db.Integer, primary_key=True)
+    corso_id = db.Column(db.Integer, db.ForeignKey('corso.id'), nullable=False)
+    data_lezione = db.Column(db.Date, nullable=False)
+    orario = db.Column(db.String(50), nullable=False)  
+
+class Presenza(db.Model):
+    __tablename__ = "presenza"
+    id = db.Column(db.Integer, primary_key=True)
+    lezione_id = db.Column(db.Integer, db.ForeignKey('lezione.id'), nullable=False)
+    discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
+    presente = db.Column(db.Boolean, default=False)
+
+    lezione = db.relationship('Lezione', backref=db.backref('presenze', lazy=True))
+    discente = db.relationship('Discente', backref=db.backref('presenze', lazy=True))

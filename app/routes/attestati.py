@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from app.models import db 
 from app.models.models import db, Attestato  # IMPORTA Attestato!
 from app.models.models import db, Iscrizione, Discente, Corso
 from reportlab.pdfgen import canvas

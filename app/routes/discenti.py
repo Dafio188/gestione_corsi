@@ -1,5 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models.models import db, Discente, Corso, Progetto, Iscrizione
+import random
+import string
+from werkzeug.security import generate_password_hash
 
 discenti_bp = Blueprint('discenti', __name__, url_prefix='/discenti')
 
@@ -70,11 +73,23 @@ def aggiungi_discente():
         corsi_ids = request.form.getlist('corsi_ids')
 
         if nome and cognome and codice_fiscale and email and progetto_id:
+            # 🔹 Generiamo una password temporanea
+            password_temporanea = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            password_hash = generate_password_hash(password_temporanea)
+
             nuovo_discente = Discente(
-                nome=nome, cognome=cognome, codice_fiscale=codice_fiscale,
-                genere=genere, fascia_eta=fascia_eta, ruolo=ruolo,
-                email=email, cellulare=cellulare, progetto_id=int(progetto_id)
+                nome=nome,
+                cognome=cognome,
+                codice_fiscale=codice_fiscale,
+                genere=genere,
+                fascia_eta=fascia_eta,
+                ruolo=ruolo,
+                email=email,
+                password_hash=password_hash,  # ✅ Salviamo la password criptata
+                cellulare=cellulare,
+                progetto_id=int(progetto_id)
             )
+
             db.session.add(nuovo_discente)
             db.session.commit()
 
@@ -83,7 +98,10 @@ def aggiungi_discente():
                 db.session.add(iscrizione)
 
             db.session.commit()
-            flash("Discente aggiunto con successo!", "success")
+
+            # ✅ Mostriamo la password temporanea all'amministratore
+            flash(f"Discente aggiunto con successo! La password temporanea è: {password_temporanea}", "success")
+
             return redirect(url_for('discenti.lista_discenti'))
 
     corsi = Corso.query.all()

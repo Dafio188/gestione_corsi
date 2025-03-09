@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app.models.models import db, Progetto
+from app.models import db
+from app.models.models import Progetto
 from datetime import datetime
 
 progetti_bp = Blueprint('progetti', __name__, url_prefix='/progetti')

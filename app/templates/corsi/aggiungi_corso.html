@@ -1,0 +1,23 @@
+<form action="{{ url_for('corsi.aggiungi_corso') }}" method="POST">
+    <div class="mb-3">
+        <label for="nome" class="form-label">Nome Corso</label>
+        <input type="text" class="form-control" id="nome" name="nome" required>
+    </div>
+
+    <div class="mb-3">
+        <label for="descrizione" class="form-label">Descrizione</label>
+        <textarea class="form-control" id="descrizione" name="descrizione"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="test_preliminare" class="form-label">Test Iniziale</label>
+        <input type="text" class="form-control" id="test_preliminare" name="test_preliminare">
+    </div>
+
+    <div class="mb-3">
+        <label for="test_postcorso" class="form-label">Test Finale</label>
+        <input type="text" class="form-control" id="test_postcorso" name="test_postcorso">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Crea Corso</button>
+</form>

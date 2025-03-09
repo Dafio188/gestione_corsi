@@ -14,22 +14,41 @@
             <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
                 <div class="position-sticky">
                     <h4 class="text-center mt-3">Gestione Corsi</h4>
+                    
+                    <!-- 🔹 Mostra l'utente attuale -->
+                    <div class="text-center mb-3">
+                        {% if current_user.is_authenticated %}
+                            <p class="fw-bold">👤 {{ current_user.nome }}</p>
+                            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">Logout</a>
+                        {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">Accedi</a>
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-secondary btn-sm">Registrati</a>
+                        {% endif %}
+                   </div>
+
                     <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">Progetti</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">Corsi</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">Discenti</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">Test</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">Attestati</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('report.lista_report') }}">Report</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
                     </ul>
                 </div>
             </nav>
+
             <!-- Contenuto Principale -->
             <main class="col-md-9 ms-auto col-lg-10 px-md-4">
                 {% block content %}{% endblock %}
             </main>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-4 p-3 bg-light">
+        <p>© 2025 Gestione Corsi - Tutti i diritti riservati</p>
+    </footer>
+
 </body>
 </html>
