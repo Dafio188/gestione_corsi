@@ -1,43 +1,79 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
-from app.models.models import db, Attestato, Iscrizione, Discente, Corso
-from reportlab.pdfgen import canvas
 import os
+from flask import Blueprint, request, redirect, url_for, flash, send_file, render_template
+from flask_login import login_required
+from app.models.models import db, Iscrizione, Discente, Corso
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 
-attestati_bp = Blueprint('attestati', __name__, url_prefix='/attestati')
+attestati_bp = Blueprint('attestati', __name__)
 
-PDF_FOLDER = "app/static/attestati"
-if not os.path.exists(PDF_FOLDER):
-    os.makedirs(PDF_FOLDER)
-
-@attestati_bp.route('/')
+@attestati_bp.route('/lista')
+@login_required
 def lista_attestati():
-    attestati = Attestato.query.all()
-    return render_template('attestati.html', attestati=attestati)
+    iscrizioni = Iscrizione.query.all()  # Recupera tutte le iscrizioni
+    return render_template('lista_attestati.html', iscrizioni=iscrizioni)
 
-@attestati_bp.route('/genera_pdf/<int:iscrizione_id>')
-def genera_pdf(iscrizione_id):
-    iscrizione = Iscrizione.query.get(iscrizione_id)
+# ✅ GENERA ATTESTATO PDF
+@attestati_bp.route('/genera_attestato/<int:corso_id>/<int:discente_id>')
+@login_required
+def genera_attestato(corso_id, discente_id):
+    iscrizione = Iscrizione.query.filter_by(corso_id=corso_id, discente_id=discente_id).first()
     
-    if not iscrizione:
-        flash('Errore: Iscrizione non trovata!', 'danger')
-        return redirect(url_for('iscrizioni.lista_iscrizioni'))
+    if not iscrizione or not iscrizione.puo_ricevere_attestato():
+        flash("Errore: Questo discente non soddisfa i requisiti per l'attestato.", "danger")
+        return redirect(url_for('test.lista_test'))
 
-    if not iscrizione.test_superato or iscrizione.ore_frequentate < iscrizione.corso.ore_totali * 0.8:
-        flash('Errore: Il discente non soddisfa i requisiti per l’attestato.', 'danger')
-        return redirect(url_for('iscrizioni.lista_iscrizioni'))
+    discente = Discente.query.get(discente_id)
+    corso = Corso.query.get(corso_id)
 
-    discente = iscrizione.discente
-    corso = iscrizione.corso
+    base_dir = os.path.join(os.getcwd(), "app", "static", "attestati")
+    os.makedirs(base_dir, exist_ok=True)
 
-    filename = f"{discente.cognome}_{discente.nome}_attestato.pdf"
-    filepath = os.path.join(PDF_FOLDER, filename)
+    filename = f"{discente.nome}_{discente.cognome}_attestato.pdf"
+    filepath = os.path.join(base_dir, filename)
 
-    c = canvas.Canvas(filepath)
-    c.drawString(100, 750, f"Attestato di Partecipazione")
-    c.drawString(100, 730, f"Certifica che {discente.nome} {discente.cognome}")
-    c.drawString(100, 710, f"Ha completato il corso '{corso.nome}' con {iscrizione.ore_frequentate} ore")
-    c.drawString(100, 690, f"Punteggio test: {iscrizione.punteggio_test}%")
+    sfondo_path = os.path.join(os.getcwd(), "app", "static", "img", "attestato_sfondo.png")
+    if not os.path.exists(sfondo_path):
+        flash("Errore: Il file dello sfondo non è stato trovato.", "danger")
+        return redirect(url_for('test.lista_test'))
+
+    # ✅ Impostazioni del PDF
+    page_width, page_height = A4
+    c = canvas.Canvas(filepath, pagesize=A4)
+    c.drawImage(ImageReader(sfondo_path), 0, 0, width=page_width, height=page_height)  # Sfondo a tutta pagina
+
+    # ✅ Registra un font calligrafico
+    font_path = os.path.join(os.getcwd(), "app", "static", "fonts", "GreatVibes-Regular.ttf")  # Assicurati che esista!
+    pdfmetrics.registerFont(TTFont('Calligrafico', font_path))
+
+    # ✅ Impostazioni font e colore del testo
+    c.setFont("Calligrafico", 40)  # Nome più grande per evidenziarlo
+    c.setFillColorRGB(0, 0, 0)  # Testo in nero
+
+    # 📌 Nome del discente (SCESO DI 4 RIGHE)
+    text_x = (page_width / 2) - 90  # Spostato leggermente a destra
+    c.drawString(text_x, 500, f"{discente.nome} {discente.cognome}")  # Prima era 600, ora 500 (abbassato di 100px)
+
+    # 📌 Nome del corso (SCESO DI 4 RIGHE)
+    c.setFont("Calligrafico", 24)
+    c.drawString(text_x - 20, 450, f"Ha frequentato il corso: {corso.nome}")
+
+    # 📌 Ore frequentate (SCESO DI 4 RIGHE)
+    c.setFont("Calligrafico", 22)
+    c.drawString(text_x, 410, f"Ore Frequentate: {iscrizione.ore_frequentate} / {corso.ore_totali}")
+
+    # 📌 Punteggio test (SCESO DI 4 RIGHE)
+    c.drawString(text_x, 370, f"Punteggio Test: {iscrizione.punteggio_test}%")
+
+    # 📌 Firma o timbro (in basso a destra)
+    c.setFont("Helvetica-Oblique", 14)
+    c.drawString(page_width - 200, 100, "Firma e Timbro")
+
+    c.showPage()
     c.save()
 
-    flash('Attestato generato con successo!', 'success')
+    flash("Attestato generato con successo!", "success")
     return send_file(filepath, as_attachment=True)

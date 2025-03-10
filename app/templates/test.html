@@ -14,45 +14,58 @@
         <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Torna alla Dashboard</a>
 
        <h3>Valuta Test</h3>
-<form action="{{ url_for('test.valuta_test') }}" method="POST">
-    <div class="mb-3">
-        <label for="corso_id" class="form-label">Seleziona Corso</label>
-        <select class="form-control" id="corso_id" name="corso_id">
-            {% for corso in corsi %}
-                <option value="{{ corso.id }}">{{ corso.nome }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <div class="mb-3">
-        <label for="discente_id" class="form-label">Seleziona Discente</label>
-        <select class="form-control" id="discente_id" name="discente_id">
-            {% for discente in discenti %}
-                <option value="{{ discente.id }}">{{ discente.nome }} {{ discente.cognome }}</option>
-            {% endfor %}
-        </select>
+       <form action="{{ url_for('test.valuta_test') }}" method="POST">
+           <div class="mb-3">
+               <label for="corso_id" class="form-label">Seleziona Corso</label>
+               <select class="form-control" id="corso_id" name="corso_id">
+                   {% for corso in corsi %}
+                       <option value="{{ corso.id }}">{{ corso.nome }}</option>
+                   {% endfor %}
+               </select>
+           </div>
+
+           <div class="mb-3">
+               <label for="discente_id" class="form-label">Seleziona Discente</label>
+               <select class="form-control" id="discente_id" name="discente_id">
+                   {% for discente in discenti %}
+                       <option value="{{ discente.id }}">{{ discente.nome }} {{ discente.cognome }}</option>
+                   {% endfor %}
+               </select>
+           </div>
+
+           <div class="mb-3">
+               <label for="punteggio" class="form-label">Punteggio (%)</label>
+               <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
+           </div>
+
+           <!-- 🔹 Mostra le ore frequentate -->
+           <div class="mb-3">
+               <label for="ore_frequentate" class="form-label">Ore Frequentate</label>
+               <input type="number" class="form-control" id="ore_frequentate" name="ore_frequentate"
+                      value="{{ iscrizione.ore_frequentate if iscrizione else 0 }}" min="0" required>
+           </div>
+
+           <button type="submit" class="btn btn-success">Valuta</button>
+       </form>
+
+       {% if iscrizione and iscrizione.puo_ricevere_attestato() %}
+           <div class="alert alert-success mt-3">
+               ✅ Questo discente ha diritto all'attestato!
+           </div>
+       {% else %}
+           <div class="alert alert-warning mt-3">
+               ⚠️ Questo discente non ha ancora completato i requisiti per l'attestato.
+           </div>
+       {% endif %}
     </div>
 
-    <div class="mb-3">
-        <label for="punteggio" class="form-label">Punteggio (%)</label>
-        <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
-    </div>
-    
-    <!-- 🔹 Mostra le ore frequentate -->
-   <div class="mb-3">
-      <label for="ore_frequentate" class="form-label">Ore Frequentate</label>
-      <input type="number" class="form-control" id="ore_frequentate" name="ore_frequentate" 
-           value="{{ iscrizione.ore_frequentate if iscrizione else 0 }}" min="0">
-   </div>
-
-    <button type="submit" class="btn btn-success">Valuta</button>
-</form>
-
-<script>
-    document.getElementById("discente_id").addEventListener("change", function() {
-        let discenti = {{ iscrizioni | tojson }};
-        let discente_id = this.value;
-        let ore_frequentate = discenti[discente_id] || 0;
-        document.getElementById("ore_frequentate").value = ore_frequentate;
-    });
-</script>
+    <script>
+        document.getElementById("discente_id").addEventListener("change", function() {
+            let discenti = {{ iscrizioni | tojson }};
+            let discente_id = this.value;
+            let ore_frequentate = discenti[discente_id] || 0;
+            document.getElementById("ore_frequentate").value = ore_frequentate;
+        });
+    </script>
+</body>
+</html>

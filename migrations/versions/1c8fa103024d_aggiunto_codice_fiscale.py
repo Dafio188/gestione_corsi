@@ -1,8 +1,8 @@
 """Aggiunto codice_fiscale
 
-Revision ID: 088b5698d836
+Revision ID: 1c8fa103024d
 Revises: 
-Create Date: 2025-03-10 03:19:45.386062
+Create Date: 2025-03-10 10:39:56.368046
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '088b5698d836'
+revision = '1c8fa103024d'
 down_revision = None
 branch_labels = None
 depends_on = None

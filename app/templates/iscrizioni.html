@@ -64,7 +64,7 @@
                     <td>
                         <!-- ✅ Bottone Genera Attestato SOLO SE il discente è idoneo -->
                         {% if iscrizione.test_superato and iscrizione.ore_frequentate >= iscrizione.corso.ore_totali * 0.8 %}
-                        <a href="{{ url_for('attestati.genera_pdf', iscrizione_id=iscrizione.id) }}" 
+                        <a href="{{ url_for('attestati.genera_attestato', corso_id=iscrizione.corso_id, discente_id=iscrizione.discente_id) }}"
                            class="btn btn-success btn-sm">Genera Attestato</a>
                         {% endif %}
 
