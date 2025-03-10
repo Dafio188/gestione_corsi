@@ -13,7 +13,7 @@
 
         <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Torna alla Dashboard</a>
 
-        <h3>Valuta Test</h3>
+       <h3>Valuta Test</h3>
 <form action="{{ url_for('test.valuta_test') }}" method="POST">
     <div class="mb-3">
         <label for="corso_id" class="form-label">Seleziona Corso</label>
@@ -38,9 +38,21 @@
         <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
     </div>
     
+    <!-- 🔹 Mostra le ore frequentate -->
+   <div class="mb-3">
+      <label for="ore_frequentate" class="form-label">Ore Frequentate</label>
+      <input type="number" class="form-control" id="ore_frequentate" name="ore_frequentate" 
+           value="{{ iscrizione.ore_frequentate if iscrizione else 0 }}" min="0">
+   </div>
+
     <button type="submit" class="btn btn-success">Valuta</button>
 </form>
 
-    </div>
-</body>
-</html>
+<script>
+    document.getElementById("discente_id").addEventListener("change", function() {
+        let discenti = {{ iscrizioni | tojson }};
+        let discente_id = this.value;
+        let ore_frequentate = discenti[discente_id] || 0;
+        document.getElementById("ore_frequentate").value = ore_frequentate;
+    });
+</script>

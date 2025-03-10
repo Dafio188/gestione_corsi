@@ -80,12 +80,17 @@ class Iscrizione(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     discente_id = db.Column(db.Integer, db.ForeignKey('discente.id'), nullable=False)
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.id'), nullable=False)
-    ore_frequentate = db.Column(db.Integer, default=0)
+    ore_frequentate = db.Column(db.Integer, default=0)  # 🔹 Ore effettivamente frequentate
     test_superato = db.Column(db.Boolean, default=False)
     punteggio_test = db.Column(db.Integer, default=0)
 
     discente = db.relationship('Discente', backref=db.backref('iscrizioni', lazy=True))
     corso = db.relationship('Corso', backref=db.backref('iscrizioni', lazy=True))
+
+    # ✅ Metodo per verificare se il discente ha diritto all'attestato
+    def puo_ricevere_attestato(self):
+        percentuale_frequenza = (self.ore_frequentate / self.corso.ore_totali) * 100
+        return percentuale_frequenza >= 80 and self.test_superato  # 🔹 Entrambe le condizioni devono essere vere
 
 class TestRisultato(db.Model):
     id = db.Column(db.Integer, primary_key=True)

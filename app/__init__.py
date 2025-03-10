@@ -47,6 +47,10 @@ def create_app():
     from app.routes.report import report_bp
     app.register_blueprint(report_bp, url_prefix='/report')
 
+    from app.routes.iscrizioni import iscrizioni_bp
+    app.register_blueprint(iscrizioni_bp)
+
+
     # ✅ SOLO ORA configuriamo Flask-Login
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # 🔹 Questo deve venire DOPO la registrazione del Blueprint
