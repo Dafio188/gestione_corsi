@@ -5,8 +5,12 @@ import string
 from werkzeug.security import generate_password_hash
 import pandas as pd
 from werkzeug.utils import secure_filename
+import logging  # Importa il modulo logging
 
 discenti_bp = Blueprint('discenti', __name__, url_prefix='/discenti')
+
+# Configura il logging (puoi personalizzare il livello e il formato)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @discenti_bp.route('/')
 def lista_discenti():
@@ -130,6 +134,7 @@ def importa_discenti():
         try:
             # Leggi il file Excel con pandas
             df = pd.read_excel(file)
+            logging.debug("File Excel letto con successo.")
 
             # Split 'Inserisci il tuo Nome e Cognome' into 'nome' and 'cognome'
             def split_nome_cognome(row):
@@ -145,17 +150,32 @@ def importa_discenti():
 
             df['nome'], df['cognome'] = zip(*df.apply(split_nome_cognome, axis=1))
 
-            # Assign the `progetto_id` column with the `Indicare la tua età` column
-            df['progetto_id'] = df['Indicare la tua età']
+            # Estrai il nome del progetto dalla colonna "Ente di appartenenza"
+            df['nome_progetto'] = df['Ente di appartenenza']
 
-            # Generate a temporary 'codice_fiscale'
-            df['codice_fiscale'] = [''.join(random.choices(string.ascii_uppercase + string.digits, k=16)) for _ in range(len(df))]
+            # Trova l'ID del progetto nel database o creane uno nuovo
+            for index, row in df.iterrows():
+                nome_progetto = row['nome_progetto']
+                progetto = Progetto.query.filter_by(nome=nome_progetto).first()
 
-            # Rename `Email` column to `email`
+                if progetto:
+                    progetto_id = progetto.id
+                else:
+                    # Se il progetto non esiste, creane uno nuovo
+                    nuovo_progetto = Progetto(nome=nome_progetto)
+                    db.session.add(nuovo_progetto)
+                    db.session.commit()
+                    progetto_id = nuovo_progetto.id
+
+                # Assegna l'ID del progetto al discente
+                df.at[index, 'progetto_id'] = progetto_id
+
+            # Assegna ruolo e fascia_eta
+            df['ruolo'] = df['Ruolo all\'interno dell\'ente']
+            df['fascia_eta'] = df['Indicare la tua età']
+
+            # Rinomina la colonna Email
             df = df.rename(columns={'Email': 'email'})
-
-            # Crea un nuovo dataframe con le colonne richieste
-            df = df[['nome', 'cognome', 'email', 'progetto_id', 'codice_fiscale']].copy()
 
             # Itera attraverso le righe del file Excel
             for index, row in df.iterrows():
@@ -165,6 +185,10 @@ def importa_discenti():
                 codice_fiscale = row['codice_fiscale']
                 email = row['email']
                 progetto_id = row['progetto_id']
+                ruolo = row['ruolo']
+                fascia_eta = row['fascia_eta']
+
+                logging.debug(f"Dati estratti dalla riga: nome={nome}, cognome={cognome}, codice_fiscale={codice_fiscale}, email={email}, progetto_id={progetto_id}, ruolo={ruolo}, fascia_eta={fascia_eta}")
 
                 # Verifica che i dati siano validi
                 if not all([nome, cognome, codice_fiscale, email, progetto_id]):
@@ -175,24 +199,41 @@ def importa_discenti():
                 password_temporanea = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
                 password_hash = generate_password_hash(password_temporanea)
 
-                # Crea un nuovo discente
-                nuovo_discente = Discente(
-                    nome=nome,
-                    cognome=cognome,
-                    codice_fiscale=codice_fiscale,
-                    email=email,
-                    password_hash=password_hash,
-                    progetto_id=progetto_id
-                )
+                # Controlla se esiste già un discente con questa email
+                discente_esistente = Discente.query.filter_by(email=email).first()
 
-                # Aggiungi il discente al database
-                db.session.add(nuovo_discente)
+                if discente_esistente:
+                    logging.debug(f"Discente con email {email} trovato nel database.")
+                    # Aggiorna le informazioni del discente esistente
+                    discente_esistente.nome = nome
+                    discente_esistente.cognome = cognome
+                    # discente_esistente.codice_fiscale = codice_fiscale # Non sovrascrivere il codice fiscale esistente, a meno che tu non voglia cambiarlo
+                    discente_esistente.ruolo = ruolo
+                    discente_esistente.fascia_eta = fascia_eta
+                    discente_esistente.progetto_id = progetto_id
+                    db.session.commit()
+                    flash(f'Discente con email {email} aggiornato.', 'info')
+                else:
+                    logging.debug(f"Discente con email {email} non trovato nel database.")
+                    # Crea un nuovo discente
+                    nuovo_discente = Discente(
+                        nome=nome,
+                        cognome=cognome,
+                        codice_fiscale=codice_fiscale,
+                        email=email,
+                        password_hash=password_hash,
+                        progetto_id=progetto_id,
+                        ruolo=ruolo,
+                        fascia_eta=fascia_eta
+                    )
+                    db.session.add(nuovo_discente)
+                    db.session.commit()
+                    flash(f'Discente con email {email} creato.', 'success')
 
-            # Salva le modifiche al database
-            db.session.commit()
-
-            flash('Discenti importati con successo!', 'success')
+            db.session.commit()  # Assicurati di fare il commit anche qui
+            flash('Importazione completata!', 'success')
         except Exception as e:
             flash(f'Errore durante l\'importazione: {str(e)}', 'danger')
+            logging.error(f"Errore durante l'importazione: {str(e)}", exc_info=True)  # Log dell'errore completo
 
     return redirect(url_for('discenti.lista_discenti'))
