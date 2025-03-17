@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky">
+                <h4 class="text-center mt-3">Gestione Corsi</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenuto Principale -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <h2>Gestione Test</h2>
+
+            <h3>Valuta Test</h3>
+            <form action="{{ url_for('test.valuta_test') }}" method="POST">
+                <div class="mb-3">
+                    <label for="corso_id" class="form-label">Seleziona Corso</label>
+                    <select class="form-control" id="corso_id" name="corso_id" required>
+                        <option value="">-- Seleziona un Corso --</option>
+                        {% for corso in corsi %}
+                            <option value="{{ corso.id }}">{{ corso.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="discente_id" class="form-label">Seleziona Discente</label>
+                    <select class="form-control" id="discente_id" name="discente_id" required disabled>
+                        <option value="">-- Seleziona un Discente --</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="punteggio" class="form-label">Punteggio (%)</label>
+                    <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="ore_frequentate" class="form-label">Ore Frequentate</label>
+                    <input type="number" class="form-control" id="ore_frequentate" name="ore_frequentate" min="0" required>
+                </div>
+
+                <button type="submit" class="btn btn-success">Valuta</button>
+            </form>
+
+            {% if iscrizione and iscrizione.puo_ricevere_attestato() %}
+                <div class="alert alert-success mt-3">
+                    ✅ Questo discente ha diritto all'attestato!
+                </div>
+            {% else %}
+                <div class="alert alert-warning mt-3">
+                    ⚠️ Questo discente non ha ancora completato i requisiti per l'attestato.
+                </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<script>
+    // Dati JSON per i discenti associati ai corsi
+    const discentiPerCorso = {
+        {% for corso in corsi %}
+            "{{ corso.id }}": [
+                {% for iscrizione in corso.iscrizioni %}
+                    { "id": {{ iscrizione.discente.id }}, "nome": "{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}", "ore_frequentate": {{ iscrizione.ore_frequentate }} },
+                {% endfor %}
+            ],
+        {% endfor %}
+    };
+
+    // Funzione per aggiornare il menu dei discenti
+    document.getElementById("corso_id").addEventListener("change", function () {
+        const corsoId = this.value;
+        const discenteSelect = document.getElementById("discente_id");
+        const oreFrequentateInput = document.getElementById("ore_frequentate");
+
+        // Pulisci il menu dei discenti e le ore frequentate
+        discenteSelect.innerHTML = '<option value="">-- Seleziona un Discente --</option>';
+        discenteSelect.disabled = !corsoId;
+        oreFrequentateInput.value = 0;
+
+        // Popola il menu con i discenti del corso selezionato
+        if (corsoId && discentiPerCorso[corsoId]) {
+            discentiPerCorso[corsoId].forEach(discente => {
+                const option = document.createElement("option");
+                option.value = discente.id;
+                option.textContent = discente.nome;
+                discenteSelect.appendChild(option);
+            });
+        }
+    });
+
+    // Funzione per aggiornare le ore frequentate
+    document.getElementById("discente_id").addEventListener("change", function () {
+        const corsoId = document.getElementById("corso_id").value;
+        const discenteId = this.value;
+        const oreFrequentateInput = document.getElementById("ore_frequentate");
+
+        if (corsoId && discenteId && discentiPerCorso[corsoId]) {
+            const discente = discentiPerCorso[corsoId].find(d => d.id == discenteId);
+            oreFrequentateInput.value = discente ? discente.ore_frequentate : 0;
+        } else {
+            oreFrequentateInput.value = 0;
+        }
+    });
+</script>
+{% endblock %}

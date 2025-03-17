@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Modifica Discente</h2>
+
+    <form action="{{ url_for('discenti.modifica_discente', id=discente.id) }}" method="POST" class="needs-validation">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome:</label>
+            <input type="text" class="form-control" id="nome" name="nome" value="{{ discente.nome }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="cognome" class="form-label">Cognome:</label>
+            <input type="text" class="form-control" id="cognome" name="cognome" value="{{ discente.cognome }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="codice_fiscale" class="form-label">Codice Fiscale:</label>
+            <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" value="{{ discente.codice_fiscale }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="genere" class="form-label">Genere:</label>
+            <select class="form-control" id="genere" name="genere" required>
+                <option value="Uomo" {% if discente.genere == "Uomo" %}selected{% endif %}>Uomo</option>
+                <option value="Donna" {% if discente.genere == "Donna" %}selected{% endif %}>Donna</option>
+                <option value="Altro" {% if discente.genere == "Altro" %}selected{% endif %}>Altro</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="fascia_eta" class="form-label">Fascia d'Età:</label>
+            <select class="form-control" id="fascia_eta" name="fascia_eta" required>
+                <option value="18-29" {% if discente.fascia_eta == "18-29" %}selected{% endif %}>18-29</option>
+                <option value="30-54" {% if discente.fascia_eta == "30-54" %}selected{% endif %}>30-54</option>
+                <option value="55+" {% if discente.fascia_eta == "55+" %}selected{% endif %}>55+</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="ruolo" class="form-label">Ruolo Interno:</label>
+            <input type="text" class="form-control" id="ruolo" name="ruolo" value="{{ discente.ruolo }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ discente.email }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="cellulare" class="form-label">Cellulare:</label>
+            <input type="text" class="form-control" id="cellulare" name="cellulare" value="{{ discente.cellulare }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="progetto_id" class="form-label">Progetto:</label>
+            <select class="form-control" id="progetto_id" name="progetto_id" required>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}" {% if progetto.id == discente.progetto_id %}selected{% endif %}>
+                        {{ progetto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="corsi_ids" class="form-label">Corsi Iscritti:</label>
+            <select class="form-control" id="corsi_ids" name="corsi_ids" multiple required>
+                {% for corso in corsi %}
+                    <option value="{{ corso.id }}" {% if corso.id in corsi_selezionati %}selected{% endif %}>
+                        {{ corso.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+        <a href="{{ url_for('discenti.lista_discenti') }}" class="btn btn-secondary">Annulla</a>
+    </form>
+</div>
+{% endblock %}

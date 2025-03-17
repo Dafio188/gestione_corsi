@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Lista Corsi</h2>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Docente</th>
+                <th>Ore Totali</th>
+                <th>Progetto Associato</th>
+                <th>Discenti Iscritti</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for corso in corsi %}
+            <tr>
+                <td>{{ corso.nome }}</td>
+                <td>{{ corso.docente }}</td>
+                <td>{{ corso.ore_totali }}</td>
+                <td>{{ corso.progetto.nome if corso.progetto else 'Nessun progetto' }}</td>
+                <td>
+                    {% for iscrizione in iscrizioni_per_corso[corso.id] %}
+                        {{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}<br>
+                    {% endfor %}
+                </td>
+                <td>
+                    <button class="btn btn-info btn-sm" data-bs-toggle="collapse" data-bs-target="#dettagli-corso-{{ corso.id }}">
+                        Mostra Dettagli
+                    </button>
+
+                    <div class="btn-group">
+                        <a href="{{ url_for('corsi.modifica_corso', id=corso.id) }}" class="btn btn-warning btn-sm">Modifica</a>
+                        <form action="{{ url_for('corsi.elimina_corso', id=corso.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+
+            <tr id="dettagli-corso-{{ corso.id }}" class="collapse">
+                <td colspan="6">
+                    <div class="card card-body">
+                        <h5>Gestione Test</h5>
+
+                        <form action="{{ url_for('corsi.upload_test', corso_id=corso.id) }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Test Iniziale:</label>
+                                    <input type="file" name="test_iniziale" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Test Finale:</label>
+                                    <input type="file" name="test_finale" class="form-control" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-info btn-sm mt-2">Carica Test</button>
+                        </form>
+
+                        <div class="mt-3">
+                            {% if corso.test_iniziale %}
+                                <a href="{{ url_for('static', filename='uploads/tests/' + corso.test_iniziale) }}" target="_blank" class="btn btn-link btn-sm">
+                                    Scarica Test Iniziale
+                                </a>
+                            {% endif %}
+                            {% if corso.test_finale %}
+                                <a href="{{ url_for('static', filename='uploads/tests/' + corso.test_finale) }}" target="_blank" class="btn btn-link btn-sm">
+                                    Scarica Test Finale
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <form action="{{ url_for('corsi.upload_test_post', corso_id=corso.id) }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                            <label class="form-label">Test Post-Corso:</label>
+                            <input type="file" name="test_postcorso" class="form-control" required>
+                            <button type="submit" class="btn btn-warning btn-sm mt-2">Carica Test Post-Corso</button>
+                        </form>
+
+                        <div class="mt-3">
+                            {% if corso.test_postcorso %}
+                                <a href="{{ url_for('static', filename='uploads/tests_post/' + corso.test_postcorso) }}" target="_blank" class="btn btn-link btn-sm">
+                                    Scarica Test Post-Corso
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        {% if corso.test_postcorso and current_user.is_authenticated %}
+                            <a href="{{ url_for('test.compila_test_post', corso_id=corso.id, discente_id=current_user.id) }}"
+                               class="btn btn-success btn-sm mt-2">
+                                Compila Test Post-Corso
+                            </a>
+                        {% elif not current_user.is_authenticated %}
+                            <p class="text-danger mt-2">Devi essere autenticato per compilare il test.</p>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Aggiungi Nuovo Corso</h3>
+    <form action="{{ url_for('corsi.aggiungi_corso') }}" method="POST" class="row g-3">
+        <div class="col-md-6">
+            <label for="nome" class="form-label">Nome Corso</label>
+            <input type="text" class="form-control" id="nome" name="nome" required>
+        </div>
+        <div class="col-md-6">
+            <label for="docente" class="form-label">Docente</label>
+            <input type="text" class="form-control" id="docente" name="docente" required>
+        </div>
+        <div class="col-md-6">
+            <label for="ore_totali" class="form-label">Ore Totali</label>
+            <input type="number" class="form-control" id="ore_totali" name="ore_totali" required>
+        </div>
+        <div class="col-md-6">
+            <label for="progetto_id" class="form-label">Progetto</label>
+            <select class="form-select" id="progetto_id" name="progetto_id" required>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}">{{ progetto.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Aggiungi</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

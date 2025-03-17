@@ -1,0 +1,7 @@
+<form action="{{ url_for('import_discenti.importa_discenti') }}" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="file">Importa Discenti da Excel:</label>
+        <input type="file" name="file" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">Carica</button>
+</form>

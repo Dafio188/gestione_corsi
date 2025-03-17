@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riepilogo Presenze</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Riepilogo Presenze per Corso</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome Discente</th>
+                    <th>Corso</th>
+                    <th>Ore Frequentate</th>
+                    <th>Percentuale Presenza (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for riepilogo in riepilogo_presenze %}
+                <tr>
+                    <td>{{ riepilogo.discente }}</td>
+                    <td>{{ riepilogo.corso }}</td>
+                    <td>{{ riepilogo.ore_frequentate }}</td>
+                    <td>{{ riepilogo.percentuale_presenza }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

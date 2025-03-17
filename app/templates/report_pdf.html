@@ -1,0 +1,52 @@
+<!-- templates/report_pdf.html -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Report PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Report Completo</h1>
+
+    <h2>Iscrizioni</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Discente</th>
+                <th>Corso</th>
+                <th>Ore Frequentate</th>
+                <th>Punteggio Test</th>
+                <th>Test Superato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for iscrizione in iscrizioni %}
+            <tr>
+                <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                <td>{{ iscrizione.corso.nome }}</td>
+                <td>{{ iscrizione.ore_frequentate }}</td>
+                <td>{{ iscrizione.punteggio_test }}</td>
+                <td>{{ 'Sì' if iscrizione.test_superato else 'No' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Altre tabelle (Discenti, Corsi, Lezioni, Presenze) -->
+    <!-- ... (stesse tabelle già presenti nel template precedente) ... -->
+</body>
+</html>

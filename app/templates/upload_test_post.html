@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Carica Test Post-Corso per {{ corso.nome }}</h2>
+    <form action="{{ url_for('corsi.upload_test_post', corso_id=corso.id) }}" method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="file" class="form-label">Seleziona il file del test (PDF, DOC, DOCX)</label>
+            <input type="file" class="form-control" name="file" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Carica Test</button>
+    </form>
+
+    {% if corso.test_postcorso %}
+    <hr>
+    <h4>Test Post-Corso Attuale:</h4>
+    <a href="{{ url_for('static', filename='uploads/tests_post/' + corso.test_postcorso) }}" target="_blank">
+        Scarica il test post-corso
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

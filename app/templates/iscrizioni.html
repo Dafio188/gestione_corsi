@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky">
+                <h4 class="text-center mt-3">Gestione Corsi</h4>
+                
+                <!-- Mostra l'utente attuale -->
+                <div class="text-center mb-3">
+                    {% if current_user.is_authenticated %}
+                        <p class="fw-bold">👤 {{ current_user.nome }}</p>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">Accedi</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-secondary btn-sm">Registrati</a>
+                    {% endif %}
+               </div>
+
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('iscrizioni.lista_iscrizioni') }}">📋 Gestione Iscrizioni</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenuto Principale -->
+        <main class="col-md-9 ms-auto col-lg-10 px-md-4">
+            <h2>Gestione Iscrizioni</h2>
+
+            <!-- Form per Assegnare un Discente a un Corso -->
+            <form action="{{ url_for('iscrizioni.assegna_discente') }}" method="POST" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="discente_id" class="form-label">Seleziona Discente</label>
+                        <select class="form-select" id="discente_id" name="discente_id" required>
+                            <option value="">-- Seleziona un Discente --</option>
+                            {% for discente in discenti %}
+                                <option value="{{ discente.id }}">{{ discente.nome }} {{ discente.cognome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="corso_id" class="form-label">Seleziona Corso</label>
+                        <select class="form-select" id="corso_id" name="corso_id" required>
+                            <option value="">-- Seleziona un Corso --</option>
+                            {% for corso in corsi %}
+                                <option value="{{ corso.id }}">{{ corso.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Assegna Discente</button>
+            </form>
+
+            <!-- Tabella delle Iscrizioni -->
+            <h3>Discenti Iscritti ai Corsi</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nome Discente</th>
+                        <th>Corso</th>
+                        <th>Ore Frequentate</th>
+                        <th>Punteggio Test</th>
+                        <th>Test Superato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for iscrizione in iscrizioni %}
+                    <tr>
+                        <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                        <td>{{ iscrizione.corso.nome }}</td>
+                        <td>{{ iscrizione.ore_frequentate }}</td>
+                        <td>{{ iscrizione.punteggio_test }}%</td>
+                        <td>
+                            {% if iscrizione.test_superato %}
+                                ✅ Sì
+                            {% else %}
+                                ❌ No
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- Bottone Genera Attestato SOLO SE il discente è idoneo -->
+                            {% if iscrizione.test_superato and iscrizione.ore_frequentate >= iscrizione.corso.ore_totali * 0.8 %}
+                            <a href="{{ url_for('attestati.genera_attestato', corso_id=iscrizione.corso_id, discente_id=iscrizione.discente_id) }}"
+                               class="btn btn-success btn-sm">Genera Attestato</a>
+                            {% endif %}
+
+                            <!-- Bottone per eliminare iscrizione -->
+                            <form action="{{ url_for('iscrizioni.elimina_iscrizione', iscrizione_id=iscrizione.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Sei sicuro di voler eliminare questa iscrizione?')">Rimuovi</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </main>
+    </div>
+</div>
+{% endblock %}

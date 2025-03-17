@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Aggiungi Nuovo Discente</h2>
+
+    <a href="{{ url_for('discenti.lista_discenti') }}" class="btn btn-secondary">Torna alla Lista Discenti</a>
+
+    <form action="{{ url_for('discenti.aggiungi_discente') }}" method="POST">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" class="form-control" id="nome" name="nome" required>
+        </div>
+        <div class="mb-3">
+            <label for="cognome" class="form-label">Cognome</label>
+            <input type="text" class="form-control" id="cognome" name="cognome" required>
+        </div>
+        <div class="mb-3">
+            <label for="codice_fiscale" class="form-label">Codice Fiscale</label>
+            <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="mb-3">
+            <label for="cellulare" class="form-label">Cellulare</label>
+            <input type="text" class="form-control" id="cellulare" name="cellulare">
+        </div>
+        <div class="mb-3">
+            <label for="genere" class="form-label">Genere</label>
+            <select class="form-control" id="genere" name="genere">
+                <option value="Maschio">Maschio</option>
+                <option value="Femmina">Femmina</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="fascia_eta" class="form-label">Fascia di Età</label>
+            <select class="form-control" id="fascia_eta" name="fascia_eta">
+                <option value="18-25">18-25</option>
+                <option value="26-35">26-35</option>
+                <option value="36-45">36-45</option>
+                <option value="46+">46+</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="ruolo" class="form-label">Ruolo</label>
+            <input type="text" class="form-control" id="ruolo" name="ruolo">
+        </div>
+        
+        <!-- Selezione Progetto -->
+        <div class="mb-3">
+            <label for="progetto_id" class="form-label">Assegna Progetto</label>
+            <select class="form-control" id="progetto_id" name="progetto_id" required>
+                <option value="" disabled selected>Seleziona un progetto</option>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}">{{ progetto.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Selezione Corsi MULTISELEZIONE -->
+        <div class="mb-3">
+            <label for="corsi_ids" class="form-label">Seleziona Corsi</label>
+            <select class="form-control" id="corsi_ids" name="corsi_ids" multiple>
+                {% for corso in corsi %}
+                    <option value="{{ corso.id }}">{{ corso.nome }}</option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Tieni premuto CTRL (o CMD su Mac) per selezionare più corsi.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Aggiungi Discente</button>
+    </form>
+</div>
+{% endblock %}

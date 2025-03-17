@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Progetti</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Gestione Progetti</h1>
+    <form action="{{ url_for('aggiungi_progetto') }}" method="POST">
+        <label for="nome_progetto">Nome Progetto:</label>
+        <input type="text" id="nome_progetto" name="nome_progetto" required>
+        <label for="amministrazione">Amministrazione/Ente/Università:</label>
+        <input type="text" id="amministrazione" name="amministrazione" required>
+        <button type="submit">Aggiungi Progetto</button>
+    </form>
+    <h2>Progetti Esistenti</h2>
+    <ul>
+        {% for progetto in progetti %}
+            <li>{{ progetto['nome_progetto'] }} - {{ progetto['amministrazione_ente_universita'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

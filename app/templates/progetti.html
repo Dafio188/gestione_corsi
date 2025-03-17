@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Lista Progetti</h2>
+
+     <!-- Form per aggiungere un progetto -->
+    <form action="{{ url_for('progetti.aggiungi_progetto') }}" method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome Progetto</label>
+            <input type="text" class="form-control" id="nome" name="nome" required>
+        </div>
+        <div class="mb-3">
+            <label for="descrizione" class="form-label">Descrizione</label>
+            <textarea class="form-control" id="descrizione" name="descrizione"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="ente" class="form-label">Ente</label>
+            <input type="text" class="form-control" id="ente" name="ente">
+        </div>
+        <div class="mb-3">
+            <label for="inizio_progetto" class="form-label">Data Inizio</label>
+            <input type="date" class="form-control" id="inizio_progetto" name="inizio_progetto">
+        </div>
+        <div class="mb-3">
+            <label for="fine_progetto" class="form-label">Data Fine</label>
+            <input type="date" class="form-control" id="fine_progetto" name="fine_progetto">
+        </div>
+        <button type="submit" class="btn btn-success">Aggiungi Progetto</button>
+    </form>
+
+    <h3 class="mt-5">Progetti Esistenti</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Descrizione</th>
+                <th>Ente</th>
+                <th>Inizio</th>
+                <th>Fine</th>
+                <th>Numero Discenti</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for progetto in progetti %}
+            <tr>
+                <td>{{ progetto.nome }}</td>
+                <td>{{ progetto.descrizione }}</td>
+                <td>{{ progetto.ente or 'N/A' }}</td>
+                <td>{{ progetto.inizio_progetto or 'N/A' }}</td>
+                <td>{{ progetto.fine_progetto or 'N/A' }}</td>
+                <td>{{ progetto.numero_discenti }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('progetti.elimina_progetto', progetto_id=progetto.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Sei sicuro di voler eliminare questo progetto?')">Elimina</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

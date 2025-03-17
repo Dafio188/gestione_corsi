@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Attestati</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>📜 Lista Attestati</h2>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome Discente</th>
+                    <th>Codice Fiscale</th>
+                    <th>Corso</th>
+                    <th>Ore Frequentate</th>
+                    <th>Punteggio Test (%)</th>
+                    <th>Data Fine</th>
+                    <th>Scarica Attestato</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for iscrizione in iscrizioni %}
+                <tr>
+                    <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                    <td>{{ iscrizione.discente.codice_fiscale }}</td>
+                    <td>{{ iscrizione.corso.nome }}</td>
+                    <td>{{ iscrizione.ore_frequentate }} / {{ iscrizione.corso.ore_totali }}</td>
+                    <td>{{ iscrizione.punteggio_test }}%</td>
+                    <td>{{ iscrizione.corso.data_fine.strftime('%d/%m/%Y') if iscrizione.corso.data_fine else 'N.D.' }}</td>
+                    <td>
+                        {% if iscrizione.puo_ricevere_attestato() %}
+                            <a href="{{ url_for('attestati.genera_attestato', corso_id=iscrizione.corso.id, discente_id=iscrizione.discente.id) }}" class="btn btn-success">📥 Scarica</a>
+                        {% else %}
+                            <button class="btn btn-secondary" disabled>❌ Non disponibile</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+

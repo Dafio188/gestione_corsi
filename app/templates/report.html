@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky">
+                <h4 class="text-center mt-3">Gestione Corsi</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('iscrizioni.lista_iscrizioni') }}">📋 Gestione Iscrizioni</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenuto Principale -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <h2>Report Completo</h2>
+
+            <form method="POST" class="mb-4">
+                <div class="row g-3">
+                    <!-- Filtro Progetto -->
+                    <div class="col-md-4">
+                        <label for="progetto_id" class="form-label">Seleziona Progetto</label>
+                        <select class="form-select" id="progetto_id" name="progetto_id" required>
+                            <option value="">-- Seleziona un Progetto --</option>
+                            {% for progetto in progetti %}
+                                <option value="{{ progetto.id }}" {% if request_form.progetto_id == progetto.id|string %}selected{% endif %}>
+                                    {{ progetto.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Filtro Corso -->
+                    <div class="col-md-4">
+                        <label for="corso_id" class="form-label">Seleziona Corso</label>
+                        <select class="form-select" id="corso_id" name="corso_id" required disabled>
+                            <option value="">-- Seleziona un Corso --</option>
+                            {% for corso in corsi %}
+                                <option value="{{ corso.id }}" {% if request_form.corso_id == corso.id|string %}selected{% endif %}>
+                                    {{ corso.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Filtro Attestato -->
+                    <div class="col-md-4">
+                        <label for="attestato" class="form-label">Filtro Attestato</label>
+                        <select class="form-select" id="attestato" name="attestato" required>
+                            <option value="">-- Filtra per Attestato --</option>
+                            <option value="Sì" {% if request_form.attestato == "Sì" %}selected{% endif %}>Sì</option>
+                            <option value="No" {% if request_form.attestato == "No" %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3 me-2">Filtra</button>
+                <button type="submit" name="azione" value="esporta_excel" class="btn btn-success mt-3">Esporta Excel</button>
+            </form>
+
+            <!-- Tabella dei Risultati -->
+            <table class="table table-striped mt-4">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Corso</th>
+                        <th>Progetto</th>
+                        <th>Attestato Rilasciato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for discente in discenti_filtrati %}
+                    <tr>
+                        <td>{{ discente.nome }}</td>
+                        <td>{{ discente.cognome }}</td>
+                        <td>{{ discente.email }}</td>
+                        <td>{{ corso_selezionato.nome if corso_selezionato else "N/A" }}</td>
+                        <td>{{ progetto_selezionato.nome if progetto_selezionato else "N/A" }}</td>
+                        <td>{{ "Sì" if filtro_attestato == "Sì" else "No" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </main>
+    </div>
+</div>
+
+<script>
+    // Aggiorna dinamicamente i corsi in base al progetto selezionato
+    document.getElementById("progetto_id").addEventListener("change", function () {
+        const progettoId = this.value;
+        const corsoSelect = document.getElementById("corso_id");
+
+        // Pulisci il menu dei corsi
+        corsoSelect.innerHTML = '<option value="">-- Seleziona un Corso --</option>';
+        corsoSelect.disabled = !progettoId;
+
+        // Recupera i corsi associati al progetto tramite AJAX
+        if (progettoId) {
+            fetch(`/report/get_corsi/${progettoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(corso => {
+                        const option = document.createElement("option");
+                        option.value = corso.id;
+                        option.textContent = corso.nome;
+                        corsoSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+</script>
+{% endblock %}

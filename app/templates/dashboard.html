@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Dashboard</h2>
+
+    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+        <a href="{{ url_for('discenti.lista_discenti') }}" class="btn btn-primary">Gestione Discenti</a>
+        <a href="{{ url_for('corsi.lista_corsi') }}" class="btn btn-secondary">Gestione Corsi</a>
+        <a href="{{ url_for('test.lista_test') }}" class="btn btn-warning">Gestione Test</a>
+        <a href="{{ url_for('iscrizioni.lista_iscrizioni') }}" class="btn btn-info">Gestione Iscrizioni</a>  <!-- ✅ Bottone Aggiunto -->
+        <a href="{{ url_for('attestati.lista_attestati') }}" class="btn btn-success">Gestione Attestati</a>
+    </div>
+
+    <hr>
+
+    <h3>Benvenuto nel sistema di gestione corsi</h3>
+    <p>Utilizza i pulsanti in alto per accedere alle diverse sezioni.</p>
+
+</div>
+{% endblock %}

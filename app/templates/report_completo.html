@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky">
+                <h4 class="text-center mt-3">Gestione Corsi</h4>
+                
+                <!-- Mostra l'utente attuale -->
+                <div class="text-center mb-3">
+                    {% if current_user.is_authenticated %}
+                        <p class="fw-bold">👤 {{ current_user.nome }}</p>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">Accedi</a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-secondary btn-sm">Registrati</a>
+                    {% endif %}
+               </div>
+
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('iscrizioni.lista_iscrizioni') }}">📋 Gestione Iscrizioni</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenuto Principale -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Pulsante Torna alla Dashboard -->
+            
+            <h2>Report Completo</h2>
+
+            <form method="POST" class="mb-4">
+                <div class="row">
+                    <!-- Filtro per Progetto -->
+                    <div class="col-md-4 mb-3">
+                        <label for="progetto_id" class="form-label">Seleziona Progetto</label>
+                        <select class="form-select" id="progetto_id" name="progetto_id" required>
+                            <option value="">-- Seleziona un Progetto --</option>
+                            {% for progetto in progetti %}
+                                <option value="{{ progetto.id }}" {% if request.form['progetto_id'] == progetto.id|string %}selected{% endif %}>
+                                    {{ progetto.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+            
+                    <!-- Filtro per Corso (Dinamico) -->
+                    <div class="col-md-4 mb-3">
+                        <label for="corso_id" class="form-label">Seleziona Corso</label>
+                        <select class="form-select" id="corso_id" name="corso_id">
+                            <option value="">-- Seleziona un Corso --</option>
+                            {% for corso in corsi %}
+                                <option value="{{ corso.id }}" {% if request.form['corso_id'] == corso.id|string %}selected{% endif %}>
+                                    {{ corso.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+            
+                    <!-- Filtro per Attestato -->
+                    <div class="col-md-4 mb-3">
+                        <label for="attestato" class="form-label">Attestato Rilasciato</label>
+                        <select class="form-select" id="attestato" name="attestato">
+                            <option value="">-- Tutti --</option>
+                            <option value="Sì" {% if request.form['attestato'] == 'Sì' %}selected{% endif %}>Sì</option>
+                            <option value="No" {% if request.form['attestato'] == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary me-2">Applica Filtri</button>
+                <button type="submit" name="azione" value="esporta_excel" class="btn btn-success">📤 Esporta in Excel</button>
+            </form>
+            
+            <!-- Visualizzazione dei Dati -->
+            {% if discenti_filtrati %}
+            <h3>Risultati</h3>
+            <p><strong>Progetto:</strong> {{ progetto_selezionato.nome }}</p>
+            <p><strong>Corso:</strong> {{ corso_selezionato.nome }}</p>
+            <p><strong>Attestato Rilasciato:</strong> {{ filtro_attestato }}</p>
+            <ul>
+                {% for discente in discenti_filtrati %}
+                <li>{{ discente.nome }} {{ discente.cognome }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            <!-- Script JavaScript per il Menu Dinamico -->
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    // Quando cambia il valore del menu "Progetto"
+                    $('#progetto_id').change(function() {
+                        const progettoId = $(this).val(); // Ottieni l'ID del progetto selezionato
+                        const corsoSelect = $('#corso_id'); // Seleziona il menu "Corso"
+
+                        // Resetta il menu "Corso"
+                        corsoSelect.empty();
+                        corsoSelect.append('<option value="">-- Seleziona un Corso --</option>');
+
+                        if (progettoId) {
+                            // Effettua una richiesta AJAX per ottenere i corsi associati al progetto
+                            $.getJSON(`/report/get_corsi/${progettoId}`, function(data) {
+                                // Aggiungi ogni corso al menu "Corso"
+                                data.forEach(function(corso) {
+                                    corsoSelect.append(`<option value="${corso.id}">${corso.nome}</option>`);
+                                });
+                            });
+                        }
+                    });
+                });
+            </script>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aggiungi Corso</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<form action="{{ url_for('corsi.aggiungi_corso') }}" method="POST">
+    <label for="progetto_id">Progetto:</label>
+    <select name="progetto_id" required>
+        {% for progetto in progetti %}
+            <option value="{{ progetto.id }}">{{ progetto.nome }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Aggiungi Corso</button>
+</form>
+
+<body>
+    <h1>Aggiungi Corso</h1>
+    <form action="{{ url_for('aggiungi_corso') }}" method="POST">
+        <label for="nome_corso">Nome Corso:</label>
+        <input type="text" id="nome_corso" name="nome_corso" required>
+        <label for="descrizione">Descrizione:</label>
+        <textarea id="descrizione" name="descrizione"></textarea>
+        <label for="docente">Docente:</label>
+        <input type="text" id="docente" name="docente" required>
+        <label for="ore_totali">Ore Totali:</label>
+        <input type="number" id="ore_totali" name="ore_totali" required>
+        <label for="data_inizio">Data Inizio:</label>
+        <input type="date" id="data_inizio" name="data_inizio" required>
+        <label for="orario">Orario:</label>
+        <input type="text" id="orario" name="orario">
+        <label for="progetto_id">Progetto:</label>
+        <select id="progetto_id" name="progetto_id" required>
+            {% for progetto in progetti %}
+                <option value="{{ progetto[0] }}">{{ progetto[1] }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Aggiungi Corso</button>
+    </form>
+    <a href="{{ url_for('corsi') }}">Torna alla Gestione Corsi</a>
+</body>
+</html>

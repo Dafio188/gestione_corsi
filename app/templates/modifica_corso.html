@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Modifica Corso</h2>
+
+    <form action="{{ url_for('corsi.modifica_corso', id=corso.id) }}" method="POST">
+        <div class="mb-3">
+            <label for="nome" class="form-label">Nome Corso</label>
+            <input type="text" class="form-control" id="nome" name="nome" value="{{ corso.nome }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="docente" class="form-label">Docente</label>
+            <input type="text" class="form-control" id="docente" name="docente" value="{{ corso.docente }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="ore_totali" class="form-label">Ore Totali</label>
+            <input type="number" class="form-control" id="ore_totali" name="ore_totali" value="{{ corso.ore_totali }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="progetto_id" class="form-label">Progetto</label>
+            <select class="form-control" id="progetto_id" name="progetto_id" required>
+                {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}" {% if corso.progetto_id == progetto.id %}selected{% endif %}>
+                        {{ progetto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Salva Modifiche</button>
+        <a href="{{ url_for('corsi.lista_corsi') }}" class="btn btn-secondary">Annulla</a>
+    </form>
+</div>
+{% endblock %}
