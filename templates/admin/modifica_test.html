@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Test - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Modifica Test</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_modifica_test', test_id=test.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="corso_id" class="form-label">Corso</label>
+                    <select class="form-select" id="corso_id" name="corso_id" required>
+                        <option value="">Seleziona un corso</option>
+                        {% for corso in corsi %}
+                        <option value="{{ corso.id }}" {% if corso.id == test.corso_id %}selected{% endif %}>
+                            {{ corso.titolo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="tipo" class="form-label">Tipo di Test</label>
+                    <select class="form-select" id="tipo" name="tipo" required>
+                        <option value="">Seleziona un tipo</option>
+                        <option value="ingresso" {% if test.tipo == 'ingresso' %}selected{% endif %}>Test d'ingresso</option>
+                        <option value="intermedio" {% if test.tipo == 'intermedio' %}selected{% endif %}>Test intermedio</option>
+                        <option value="finale" {% if test.tipo == 'finale' %}selected{% endif %}>Test finale</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="titolo" class="form-label">Titolo</label>
+                    <input type="text" class="form-control" id="titolo" name="titolo" value="{{ test.titolo }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="file" class="form-label">File del Test (opzionale)</label>
+                    <input type="file" class="form-control" id="file" name="file">
+                    <div class="form-text">
+                        {% if test.file_path %}
+                        File attuale: {{ test.file_path.split('/')[-1] }}
+                        {% else %}
+                        Nessun file caricato
+                        {% endif %}
+                    </div>
+                    <div class="form-text">Carica un nuovo file PDF o Word per sostituire quello esistente.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="forms_link" class="form-label">Link a Google Forms (opzionale)</label>
+                    <input type="url" class="form-control" id="forms_link" name="forms_link" value="{{ test.forms_link }}">
+                    <div class="form-text">Inserisci un link a un modulo Google Forms per il test online.</div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Aggiorna Test</button>
+                <a href="{{ url_for('admin_test') }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

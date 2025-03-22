@@ -1,6 +1,3663 @@
-from app import create_app
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, send_from_directory
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from functools import wraps
+from datetime import datetime, timezone 
+from flask_migrate import Migrate
+from io import BytesIO
+from flask_wtf.csrf import CSRFProtect
+from flask import make_response
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+import os
+import pandas as pd
+import random
+import string
+import xlsxwriter
+from extensions import db  # Import db from extensions
+from routes import progetti
+from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato  # Import all models
 
-app = create_app()
+# Define allowed file extensions
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'}
 
+# Initialize Flask app
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gestione_corsi.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'uploads'
+
+# Ensure upload directories exist
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'test'), exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'attestati'), exist_ok=True)
+
+# Initialize CSRF protection
+csrf = CSRFProtect()
+csrf.init_app(app)
+
+# Initialize database with the app
+db.init_app(app)
+
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
+
+# Initialize login manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Effettua il login per accedere a questa pagina'
+login_manager.login_message_category = 'warning'
+
+# Keep the rest of the code as is
+# Move the role_required decorator definition before it's used
+@login_manager.user_loader
+def load_user(user_id):
+    # Replace Query.get() with Session.get()
+    return db.session.get(User, int(user_id))
+
+# Decoratore per controllo ruoli
+def role_required(roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            print(f"Role check for user: {current_user.username}, user role: {current_user.role}, required roles: {roles}")
+            if not current_user.is_authenticated or current_user.role not in roles:
+                flash('Non hai i permessi per accedere a questa pagina', 'danger')
+                return redirect(url_for('login'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Add this after creating the app but before defining routes
+@app.context_processor
+def utility_processor():
+    return {
+        'User': User,
+        'datetime': datetime
+    }
+
+# Rotte per autenticazione
+@app.route('/')
+def index():
+    if current_user.is_authenticated:
+        # Redirect based on user role
+        if current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        elif current_user.role == 'docente':
+            return redirect(url_for('docente_dashboard'))
+        else:  # discente
+            return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        # Redirect based on user role
+        if current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        elif current_user.role == 'docente':
+            return redirect(url_for('docente_dashboard'))
+        else:  # discente
+            return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Login effettuato con successo', 'success')
+            
+            # Redirect based on user role
+            if user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            elif user.role == 'docente':
+                return redirect(url_for('docente_dashboard'))
+            else:  # discente
+                return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+        else:
+            flash('Username o password non validi', 'danger')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    if current_user.role == 'admin':
+        # Get data for admin dashboard
+        progetti = Progetto.query.all()
+        corsi = Corso.query.all()
+        discenti = User.query.filter_by(role='discente').all()
+        docenti = User.query.filter_by(role='docente').all()
+        test_completati = RisultatoTest.query.count()
+        attestati = Attestato.query.all()
+        
+        return render_template('admin/dashboard.html', 
+                              progetti=progetti,
+                              corsi=corsi,
+                              discenti=discenti,
+                              docenti=docenti,
+                              test_completati=test_completati,
+                              attestati=attestati)
+    elif current_user.role == 'docente':
+        return redirect(url_for('docente_corsi'))
+    elif current_user.role == 'discente':
+        # Redirect to discente_corsi instead of discente_dashboard
+        return redirect(url_for('discente_corsi'))
+    else:
+        flash('Ruolo non riconosciuto', 'danger')
+        return redirect(url_for('logout'))
+
+# Rotte per admin
+@app.route('/admin/dashboard')
+@login_required
+@role_required(['admin'])
+def admin_dashboard():
+    # Count data for dashboard
+    progetti_count = Progetto.query.count()
+    corsi_count = Corso.query.count()
+    discenti_count = User.query.filter_by(role='discente').count()
+    docenti_count = User.query.filter_by(role='docente').count()
+    test_count = RisultatoTest.query.count()
+    attestati_count = Attestato.query.count()
+    
+    return render_template('admin/dashboard.html', 
+                          progetti_count=progetti_count,
+                          corsi_count=corsi_count,
+                          discenti_count=discenti_count,
+                          docenti_count=docenti_count,
+                          test_count=test_count,
+                          attestati_count=attestati_count)
+
+# Add this route after your admin_dashboard route
+@app.route('/admin/progetti')
+@login_required
+@role_required(['admin'])
+def admin_progetti():
+    progetti = Progetto.query.all()
+    return render_template('admin/progetti.html', progetti=progetti)
+
+@app.route('/admin/utenti')
+@login_required
+@role_required(['admin'])
+def admin_utenti():
+    utenti = User.query.all()
+    return render_template('admin/utenti.html', utenti=utenti)
+
+@app.route('/admin/utenti/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuovo_utente():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        cognome = request.form.get('cognome')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        
+        # Verifica se l'utente esiste già
+        if User.query.filter_by(username=username).first():
+            flash('Username già in uso', 'danger')
+            return redirect(url_for('admin_nuovo_utente'))
+            
+        if User.query.filter_by(email=email).first():
+            flash('Email già in uso', 'danger')
+            return redirect(url_for('admin_nuovo_utente'))
+        
+        # Crea nuovo utente
+        utente = User(
+            username=username,
+            email=email,
+            nome=nome,
+            cognome=cognome,
+            role=role
+        )
+        utente.set_password(password)
+        
+        db.session.add(utente)
+        db.session.commit()
+        
+        flash('Utente creato con successo', 'success')
+        return redirect(url_for('admin_utenti'))
+        
+    return render_template('admin/nuovo_utente.html')
+
+# Aggiungi questa rotta al tuo file run.py
+@app.route('/admin/importa-discenti', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_importa_discenti():
+    risultati = None
+    progetti = Progetto.query.all()
+    
+    if request.method == 'POST':
+        # Verifica se è stato caricato un file
+        if 'file' not in request.files:
+            flash('Nessun file selezionato', 'danger')
+            return redirect(request.url)
+            
+        file = request.files['file']
+        
+        # Verifica se il file ha un nome
+        if file.filename == '':
+            flash('Nessun file selezionato', 'danger')
+            return redirect(request.url)
+            
+        # Verifica se il file è un Excel
+        if not file.filename.endswith('.xlsx'):
+            flash('Il file deve essere in formato Excel (.xlsx)', 'danger')
+            return redirect(request.url)
+        
+        # Password predefinita
+        password_default = request.form.get('password_default', 'Password123')
+        
+        try:
+            # Leggi il file Excel
+            df = pd.read_excel(file)
+            
+            # Inizializza contatori
+            importati = 0
+            saltati = 0
+            errori = []
+            progetti_non_trovati = set()
+            
+            # Itera sulle righe del dataframe
+            for index, row in df.iterrows():
+                try:
+                    # Estrai i dati
+                    codice_fiscale = str(row['Codice Fiscale']).strip() if not pd.isna(row['Codice Fiscale']) else ""
+                    nome_cognome = str(row['Inserisci il tuo Nome e Cognome']).strip() if not pd.isna(row['Inserisci il tuo Nome e Cognome']) else ""
+                    eta_str = str(row['Indicare la tua età']).strip() if not pd.isna(row['Indicare la tua età']) else ""
+                    ruolo_ente = str(row['Ruolo all\'interno dell\'ente']).strip() if not pd.isna(row['Ruolo all\'interno dell\'ente']) else ""
+                    email = str(row['Email']).strip() if not pd.isna(row['Email']) else ""
+                    unita_org = str(row['Unità Organizzativa/Dipartimento di Appartenenza (Opzionale)']).strip() if not pd.isna(row['Unità Organizzativa/Dipartimento di Appartenenza (Opzionale)']) else ""
+                    dipartimento_altro = str(row['Specifica il tuo Dipartimento (Solo se hai scelto \'Altro\' sopra)']).strip() if not pd.isna(row['Specifica il tuo Dipartimento (Solo se hai scelto \'Altro\' sopra)']) else ""
+                    
+                    # Estrai il nome del progetto dalla colonna "Ente di appartenenza"
+                    nome_progetto = str(row['Ente di appartenenza']).strip() if not pd.isna(row['Ente di appartenenza']) else ""
+                    
+                    # Dividi nome e cognome
+                    parti_nome = nome_cognome.split(' ', 1)
+                    nome = parti_nome[0] if len(parti_nome) > 0 else ""
+                    cognome = parti_nome[1] if len(parti_nome) > 1 else ""
+                    
+                    # Verifica se l'email è valida
+                    if not email or '@' not in email:
+                        errori.append(f"Riga {index+2}: Email non valida o mancante ({email})")
+                        continue
+                    
+                    # Verifica se l'utente esiste già
+                    if User.query.filter_by(email=email).first():
+                        saltati += 1
+                        continue
+                    
+                    # Trova il progetto corrispondente
+                    progetto = None
+                    if nome_progetto:
+                        progetto = Progetto.query.filter(Progetto.titolo.ilike(f"%{nome_progetto}%")).first()
+                        if not progetto:
+                            progetti_non_trovati.add(nome_progetto)
+                            errori.append(f"Riga {index+2}: Progetto non trovato ({nome_progetto})")
+                            continue
+                    else:
+                        errori.append(f"Riga {index+2}: Nome progetto mancante")
+                        continue
+                    
+                    # Genera username unico basato su nome e cognome
+                    base_username = f"{nome.lower()}.{cognome.lower()}".replace(' ', '')
+                    username = base_username
+                    counter = 1
+                    
+                    # Assicurati che lo username sia unico
+                    while User.query.filter_by(username=username).first():
+                        username = f"{base_username}{counter}"
+                        counter += 1
+                    
+                    # Crea nuovo utente
+                    utente = User(
+                        username=username,
+                        email=email,
+                        nome=nome,
+                        cognome=cognome,
+                        role='discente',
+                        # Aggiungi i campi aggiuntivi
+                        codice_fiscale=codice_fiscale,
+                        eta=eta_str,
+                        ruolo_ente=ruolo_ente,
+                        unita_org=unita_org,
+                        dipartimento=dipartimento_altro if unita_org == 'Altro' else unita_org,
+                        progetto_id=progetto.id  # Associa al progetto trovato
+                    )
+                    utente.set_password(password_default)
+                    
+                    db.session.add(utente)
+                    importati += 1
+                    
+                except Exception as e:
+                    errori.append(f"Riga {index+2}: {str(e)}")
+            
+            # Commit delle modifiche
+            db.session.commit()
+            
+            # Aggiungi informazioni sui progetti non trovati
+            if progetti_non_trovati:
+                flash(f'Attenzione: i seguenti progetti non sono stati trovati: {", ".join(progetti_non_trovati)}', 'warning')
+            
+            risultati = {
+                'importati': importati,
+                'saltati': saltati,
+                'errori': errori,
+                'progetti_non_trovati': list(progetti_non_trovati)
+            }
+            
+            flash(f'Importazione completata: {importati} discenti importati, {saltati} saltati', 'success')
+            
+        except Exception as e:
+            flash(f'Errore durante l\'importazione: {str(e)}', 'danger')
+    
+    return render_template('admin/importa_discenti.html', risultati=risultati, progetti=progetti)
+
+@app.route('/admin/iscrizioni/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuova_iscrizione():
+    if request.method == 'POST':
+        discente_id = request.form.get('discente_id')
+        corso_id = request.form.get('corso_id')
+        
+        # Verifica se l'iscrizione esiste già
+        iscrizione_esistente = Iscrizione.query.filter_by(
+            discente_id=discente_id, 
+            corso_id=corso_id
+        ).first()
+        
+        if iscrizione_esistente:
+            flash('Iscrizione già esistente', 'warning')
+            return redirect(url_for('admin_nuova_iscrizione'))
+        
+        # Crea nuova iscrizione
+        iscrizione = Iscrizione(
+            discente_id=discente_id,
+            corso_id=corso_id,
+            ore_frequentate=0
+        )
+        
+        db.session.add(iscrizione)
+        db.session.commit()
+        
+        flash('Iscrizione creata con successo', 'success')
+        return redirect(url_for('admin_corsi'))
+    
+    # Ottieni tutti i discenti e corsi per il form
+    discenti = User.query.filter_by(role='discente').all()
+    corsi = Corso.query.all()
+    
+    return render_template('admin/nuova_iscrizione.html', 
+                          discenti=discenti, 
+                          corsi=corsi)
+
+@app.route('/admin/utenti/modifica/<int:utente_id>', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_modifica_utente(utente_id):
+    utente = User.query.get_or_404(utente_id)
+    progetti = Progetto.query.all()
+    
+    if request.method == 'POST':
+        # Extract form data
+        username = request.form.get('username')
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        cognome = request.form.get('cognome')
+        role = request.form.get('role')
+        password = request.form.get('password')
+        codice_fiscale = request.form.get('codice_fiscale')
+        unita_org = request.form.get('unita_org')
+        progetto_id = request.form.get('progetto_id')
+        
+        # Check if username is already taken by another user
+        existing_user = User.query.filter(User.username == username, User.id != utente_id).first()
+        if existing_user:
+            flash('Username già in uso', 'danger')
+            return redirect(url_for('admin_modifica_utente', utente_id=utente_id))
+        
+        # Check if email is already taken by another user
+        existing_user = User.query.filter(User.email == email, User.id != utente_id).first()
+        if existing_user:
+            flash('Email già in uso', 'danger')
+            return redirect(url_for('admin_modifica_utente', utente_id=utente_id))
+        
+        # Update user information
+        utente.username = username
+        utente.email = email
+        utente.nome = nome
+        utente.cognome = cognome
+        utente.role = role
+        utente.codice_fiscale = codice_fiscale
+        utente.unita_org = unita_org
+        
+        # Only update progetto_id if the role is 'discente'
+        if role == 'discente':
+            utente.progetto_id = progetto_id if progetto_id else None
+        else:
+            utente.progetto_id = None
+        
+        # Update password if provided
+        if password:
+            utente.set_password(password)
+        
+        db.session.commit()
+        flash('Utente aggiornato con successo', 'success')
+        return redirect(url_for('admin_utenti'))
+    
+    return render_template('admin/modifica_utente.html', utente=utente, progetti=progetti)
+
+@app.route('/admin/utenti/elimina/<int:utente_id>', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_elimina_utente(utente_id):
+    utente = User.query.get_or_404(utente_id)
+    
+    # Non permettere l'eliminazione dell'utente corrente
+    if utente.id == current_user.id:
+        flash('Non puoi eliminare il tuo account', 'danger')
+        return redirect(url_for('admin_utenti'))
+    
+    try:
+        # Trova tutte le iscrizioni dell'utente
+        iscrizioni = Iscrizione.query.filter_by(discente_id=utente_id).all()
+        
+        # Per ogni iscrizione, elimina i risultati dei test e gli attestati
+        for iscrizione in iscrizioni:
+            # Elimina i risultati dei test
+            RisultatoTest.query.filter_by(iscrizione_id=iscrizione.id).delete()
+            
+            # Elimina gli attestati
+            Attestato.query.filter_by(iscrizione_id=iscrizione.id).delete()
+            
+            # Elimina l'iscrizione
+            db.session.delete(iscrizione)
+        
+        # Se l'utente è un docente, gestisci i corsi associati
+        if utente.role == 'docente':
+            # Opzione 1: Imposta il docente_id a NULL per i corsi
+            # Corso.query.filter_by(docente_id=utente_id).update({Corso.docente_id: None})
+            
+            # Opzione 2: Elimina i corsi (e tutte le iscrizioni associate)
+            corsi = Corso.query.filter_by(docente_id=utente_id).all()
+            for corso in corsi:
+                # Elimina tutti i test associati al corso
+                test_list = Test.query.filter_by(corso_id=corso.id).all()
+                for test in test_list:
+                    # Elimina tutti i risultati dei test
+                    RisultatoTest.query.filter_by(test_id=test.id).delete()
+                    db.session.delete(test)
+                
+                # Trova tutte le iscrizioni al corso
+                corso_iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+                for iscrizione in corso_iscrizioni:
+                    # Elimina attestati
+                    Attestato.query.filter_by(iscrizione_id=iscrizione.id).delete()
+                    # Elimina l'iscrizione
+                    db.session.delete(iscrizione)
+                
+                # Elimina il corso
+                db.session.delete(corso)
+        
+        # Elimina l'utente
+        db.session.delete(utente)
+        db.session.commit()
+        
+        flash('Utente eliminato con successo', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore durante l\'eliminazione: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_utenti'))  
+
+# After the docente_salva_risultati_test route
+
+@app.route('/admin/corsi/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuovo_corso():
+    if request.method == 'POST':
+        titolo = request.form.get('titolo')
+        descrizione = request.form.get('descrizione')
+        ore_totali = float(request.form.get('ore_totali'))
+        data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
+        data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
+        progetto_id = request.form.get('progetto_id')
+        progetto_riferimento = request.form.get('progetto_riferimento')
+        
+        # Add error handling for docente_id
+        docente_id_raw = request.form.get('docente_id')
+        if not docente_id_raw:
+            flash('Seleziona un docente', 'danger')
+            docenti = User.query.filter_by(role='docente').all()
+            progetti = Progetto.query.all()
+            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+        
+        docente_id = int(docente_id_raw)
+        
+        # Get modalita and related fields
+        modalita = request.form.get('modalita', 'in_house')
+        indirizzo = request.form.get('indirizzo')
+        link_webinar = request.form.get('link_webinar')
+        piattaforma = request.form.get('piattaforma')  # Add this line
+        orario = request.form.get('orario')
+
+        # Validate modalita-specific fields
+        if modalita == 'in_house' and not indirizzo:
+            flash('Per la modalità in-house è necessario specificare l\'indirizzo', 'danger')
+            docenti = User.query.filter_by(role='docente').all()
+            progetti = Progetto.query.all()
+            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+        
+        if modalita == 'webinar' and not link_webinar:
+            flash('Per la modalità webinar è necessario specificare il link', 'danger')
+            docenti = User.query.filter_by(role='docente').all()
+            progetti = Progetto.query.all()
+            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+            
+        if modalita == 'e_learning' and not piattaforma:  # Add this validation
+            flash('Per la modalità e-learning è necessario specificare la piattaforma', 'danger')
+            docenti = User.query.filter_by(role='docente').all()
+            progetti = Progetto.query.all()
+            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+
+        corso = Corso(
+            titolo=titolo,
+            descrizione=descrizione,
+            ore_totali=ore_totali,
+            data_inizio=data_inizio,
+            data_fine=data_fine,
+            progetto_riferimento=progetto_riferimento,
+            progetto_id=progetto_id,
+            docente_id=docente_id,
+            modalita=modalita,
+            indirizzo=indirizzo,
+            link_webinar=link_webinar,
+            piattaforma=piattaforma,  # Add this line
+            orario=orario
+        )
+        
+        db.session.add(corso)
+        db.session.commit()
+        
+        flash('Corso creato con successo', 'success')
+        return redirect(url_for('admin_corsi'))
+    
+    docenti = User.query.filter_by(role='docente').all()
+    progetti = Progetto.query.all()
+    return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+
+@app.route('/admin/corsi/<int:corso_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_modifica_corso(corso_id):
+    corso = db.session.get(Corso, corso_id)
+    if not corso:
+        abort(404)
+    
+    docenti = User.query.filter_by(role='docente').all()
+    progetti = Progetto.query.all()
+    
+    if request.method == 'POST':
+        # Update course information
+        corso.titolo = request.form.get('titolo')
+        corso.descrizione = request.form.get('descrizione')
+        corso.ore_totali = float(request.form.get('ore_totali'))
+        corso.data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
+        corso.data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
+        corso.progetto_id = request.form.get('progetto_id')
+        corso.progetto_riferimento = request.form.get('progetto_riferimento')
+        corso.docente_id = int(request.form.get('docente_id'))
+        corso.modalita = request.form.get('modalita', 'in_house')
+        
+        # Campi specifici per modalità
+        corso.indirizzo = request.form.get('indirizzo')
+        corso.orario = request.form.get('orario')
+        corso.link_webinar = request.form.get('link_webinar')
+        corso.piattaforma = request.form.get('piattaforma')  # Add this line
+        
+        # Validate modalita-specific fields
+        if corso.modalita == 'in_house' and not corso.indirizzo:
+            flash('Per la modalità in-house è necessario specificare l\'indirizzo', 'danger')
+            return render_template('admin/modifica_corso.html', corso=corso, docenti=docenti, progetti=progetti)
+        
+        if corso.modalita == 'webinar' and not corso.link_webinar:
+            flash('Per la modalità webinar è necessario specificare il link', 'danger')
+            return render_template('admin/modifica_corso.html', corso=corso, docenti=docenti, progetti=progetti)
+            
+        if corso.modalita == 'e_learning' and not corso.piattaforma:  # Add this validation
+            flash('Per la modalità e-learning è necessario specificare la piattaforma', 'danger')
+            return render_template('admin/modifica_corso.html', corso=corso, docenti=docenti, progetti=progetti)
+        
+        db.session.commit()
+        flash('Corso aggiornato con successo', 'success')
+        return redirect(url_for('admin_corsi'))
+    
+    return render_template('admin/modifica_corso.html', corso=corso, docenti=docenti, progetti=progetti)
+
+# Rotte per docenti
+@app.route('/docente/dashboard')
+@login_required
+@role_required(['docente'])
+def docente_dashboard():
+    # Qui puoi aggiungere la logica per recuperare i dati necessari per la dashboard del docente
+    # Ad esempio, i corsi che il docente sta insegnando
+    corsi_docente = Corso.query.filter_by(docente_id=current_user.id).all()
+    
+    return render_template('docente/dashboard.html', 
+                          corsi_count=len(corsi_docente),
+                          corsi=corsi_docente)
+
+@app.route('/docente/corsi')
+@login_required
+@role_required(['docente'])
+def docente_corsi():
+    corsi = Corso.query.filter_by(docente_id=current_user.id).all()
+    return render_template('docente/corsi.html', corsi=corsi)
+
+@app.route('/docente/corsi/<int:corso_id>')
+@login_required
+@role_required(['docente'])
+def docente_dettaglio_corso(corso_id):
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+    test = Test.query.filter_by(corso_id=corso.id).all()
+    return render_template('docente/dettaglio_corso.html', corso=corso, iscrizioni=iscrizioni, test=test)
+
+@app.route('/docente/corsi/<int:corso_id>/iscrizioni/<int:iscrizione_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_modifica_iscrizione(corso_id, iscrizione_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Get the enrollment
+    iscrizione = Iscrizione.query.get_or_404(iscrizione_id)
+    
+    # Verify that the enrollment belongs to the course
+    if iscrizione.corso_id != corso_id:
+        abort(404)
+    
+    if request.method == 'POST':
+        # Update enrollment hours
+        ore_frequentate = request.form.get('ore_frequentate', 0)
+        iscrizione.ore_frequentate = float(ore_frequentate) if ore_frequentate else 0
+        
+        db.session.commit()
+        flash('Ore frequentate aggiornate con successo', 'success')
+        return redirect(url_for('docente_dettaglio_corso', corso_id=corso_id))
+    
+    return render_template('docente/modifica_iscrizione.html', corso=corso, iscrizione=iscrizione)
+
+@app.route('/docente/corsi/<int:corso_id>/test/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_nuovo_test(corso_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    if request.method == 'POST':
+        tipo = request.form.get('tipo')
+        titolo = request.form.get('titolo')
+        forms_link = request.form.get('forms_link')
+        
+        # Gestione upload file
+        file = request.files.get('file')
+        file_path = None
+        
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'test', filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            file.save(file_path)
+        
+        # Crea nuovo test
+        test = Test(
+            corso_id=corso_id,
+            tipo=tipo,
+            titolo=titolo,
+            file_path=file_path,
+            forms_link=forms_link
+        )
+        
+        db.session.add(test)
+        db.session.commit()
+        
+        flash('Test creato con successo', 'success')
+        return redirect(url_for('docente_dettaglio_corso', corso_id=corso_id))
+        
+    return render_template('docente/nuovo_test.html', corso=corso)
+
+@app.route('/docente/corsi/<int:corso_id>/test/<int:test_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_modifica_test(corso_id, test_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Get the test
+    test = Test.query.get_or_404(test_id)
+    
+    # Verify that the test belongs to the course
+    if test.corso_id != corso_id:
+        abort(404)
+    
+    if request.method == 'POST':
+        # Update test information
+        test.tipo = request.form.get('tipo')
+        test.titolo = request.form.get('titolo')
+        test.forms_link = request.form.get('forms_link')
+        
+        # Handle file upload if a new file is provided
+        file = request.files.get('file')
+        if file and file.filename != '':
+            # Save the new file
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'test', filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            file.save(file_path)
+            
+            # Update the file path
+            test.file_path = file_path
+        
+        db.session.commit()
+        flash('Test aggiornato con successo', 'success')
+        return redirect(url_for('docente_dettaglio_corso', corso_id=corso_id))
+    
+    return render_template('docente/modifica_test.html', corso=corso, test=test)
+
+@app.route('/docente/corsi/<int:corso_id>/test/<int:test_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['docente'])
+def docente_elimina_test(corso_id, test_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Get the test
+    test = Test.query.get_or_404(test_id)
+    
+    # Verify that the test belongs to the course
+    if test.corso_id != corso_id:
+        abort(404)
+    
+    # Delete all test results associated with this test
+    risultati = RisultatoTest.query.filter_by(test_id=test_id).all()
+    for risultato in risultati:
+        db.session.delete(risultato)
+    
+    # Delete the test
+    db.session.delete(test)
+    db.session.commit()
+    
+    flash('Test eliminato con successo', 'success')
+    return redirect(url_for('docente_dettaglio_corso', corso_id=corso_id))
+
+@app.route('/docente/corsi/<int:corso_id>/test/<int:test_id>')
+@login_required
+@role_required(['docente'])
+def docente_dettaglio_test(corso_id, test_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Get the test
+    test = Test.query.get_or_404(test_id)
+    
+    # Verify that the test belongs to the course
+    if test.corso_id != corso_id:
+        abort(404)
+    
+    # Get all enrollments for this course
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    
+    # Get test results for each enrollment
+    risultati = {}
+    for iscrizione in iscrizioni:
+        risultato = RisultatoTest.query.filter_by(
+            test_id=test_id,
+            iscrizione_id=iscrizione.id
+        ).first()
+        
+        if risultato:
+            risultati[iscrizione.id] = risultato
+    
+    return render_template('docente/dettaglio_test.html', 
+                          corso=corso, 
+                          test=test, 
+                          iscrizioni=iscrizioni,
+                          risultati=risultati)
+
+@app.route('/docente/corsi/<int:corso_id>/test/<int:test_id>/risultati', methods=['POST'])
+@login_required
+@role_required(['docente'])
+def docente_salva_risultati_test(corso_id, test_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Get the test
+    test = Test.query.get_or_404(test_id)
+    
+    # Verify that the test belongs to the course
+    if test.corso_id != corso_id:
+        abort(404)
+    
+    # Get all enrollments for this course
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    
+    # Process form data
+    for iscrizione in iscrizioni:
+        punteggio_key = f'punteggio_{iscrizione.id}'
+        superato_key = f'superato_{iscrizione.id}'
+        
+        if punteggio_key in request.form and request.form.get(punteggio_key):
+            punteggio = float(request.form.get(punteggio_key, 0))
+            superato = superato_key in request.form
+            
+            # Check if result already exists
+            risultato = RisultatoTest.query.filter_by(
+                test_id=test_id,
+                iscrizione_id=iscrizione.id
+            ).first()
+            
+            if risultato:
+                # Update existing result
+                risultato.punteggio = punteggio
+                risultato.superato = superato
+                risultato.data_completamento = datetime.utcnow()
+            else:
+                # Create new result
+                risultato = RisultatoTest(
+                    test_id=test_id,
+                    iscrizione_id=iscrizione.id,
+                    punteggio=punteggio,
+                    superato=superato
+                )
+                db.session.add(risultato)
+    
+    db.session.commit()
+    flash('Risultati del test salvati con successo', 'success')
+    return redirect(url_for('docente_dettaglio_test', corso_id=corso_id, test_id=test_id))
+
+@app.route('/docente/corsi/<int:corso_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_modifica_corso(corso_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    progetti = Progetto.query.all()
+    
+    if request.method == 'POST':
+        # Update course information
+        corso.titolo = request.form.get('titolo')
+        corso.descrizione = request.form.get('descrizione')
+        corso.ore_totali = float(request.form.get('ore_totali'))
+        corso.data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
+        corso.data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
+        corso.progetto_id = request.form.get('progetto_id')
+        corso.progetto_riferimento = request.form.get('progetto_riferimento')
+        
+        # Get modalita and related fields
+        corso.modalita = request.form.get('modalita', 'in_house')
+        corso.indirizzo = request.form.get('indirizzo')
+        corso.link_webinar = request.form.get('link_webinar')
+        corso.piattaforma = request.form.get('piattaforma')  # Add this line
+        corso.orario = request.form.get('orario')
+        
+        # Validate modalita-specific fields
+        if corso.modalita == 'in_house' and not corso.indirizzo:
+            flash('Per la modalità in-house è necessario specificare l\'indirizzo', 'danger')
+            return render_template('docente/modifica_corso.html', corso=corso, progetti=progetti)
+        
+        if corso.modalita == 'webinar' and not corso.link_webinar:
+            flash('Per la modalità webinar è necessario specificare il link', 'danger')
+            return render_template('docente/modifica_corso.html', corso=corso, progetti=progetti)
+        
+        if corso.modalita == 'e_learning' and not corso.piattaforma:  # Add this validation
+            flash('Per la modalità e-learning è necessario specificare la piattaforma', 'danger')
+            return render_template('docente/modifica_corso.html', corso=corso, progetti=progetti)
+        
+        db.session.commit()
+        flash('Corso aggiornato con successo', 'success')
+        return redirect(url_for('docente_corsi'))
+    
+    return render_template('docente/modifica_corso.html', corso=corso, progetti=progetti)
+
+@app.route('/docente/corsi/<int:corso_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['docente'])
+def docente_elimina_corso(corso_id):
+    # Verify that the course belongs to the current docente
+    corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
+    
+    # Check if there are any enrollments for this course
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    
+    # If there are enrollments, don't allow deletion
+    if iscrizioni:
+        flash('Non è possibile eliminare un corso con iscrizioni attive', 'danger')
+        return redirect(url_for('docente_corsi'))
+    
+    # Delete tests associated with this course
+    tests = Test.query.filter_by(corso_id=corso_id).all()
+    for test in tests:
+        db.session.delete(test)
+    
+    # Delete the course
+    db.session.delete(corso)
+    db.session.commit()
+    
+    flash('Corso eliminato con successo', 'success')
+    return redirect(url_for('docente_corsi'))
+
+# Then add these routes to your run.py file
+@app.route('/docente/note', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_note():
+    # Recupera tutte le note del docente
+    note = Nota.query.filter_by(docente_id=current_user.id).all()
+    
+    if request.method == 'POST':
+        titolo = request.form.get('titolo')
+        contenuto = request.form.get('contenuto')
+        corso_id = request.form.get('corso_id') or None
+        
+        # Crea una nuova nota
+        nuova_nota = Nota(
+            titolo=titolo,
+            contenuto=contenuto,
+            docente_id=current_user.id,
+            corso_id=corso_id
+        )
+        
+        db.session.add(nuova_nota)
+        db.session.commit()
+        
+        flash('Nota salvata con successo', 'success')
+        return redirect(url_for('docente_note'))
+    
+    # Recupera i corsi del docente per il dropdown
+    corsi = Corso.query.filter_by(docente_id=current_user.id).all()
+    
+    return render_template('docente/note.html', note=note, corsi=corsi)
+
+@app.route('/docente/note/<int:nota_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_modifica_nota(nota_id):
+    # Recupera la nota
+    nota = Nota.query.filter_by(id=nota_id, docente_id=current_user.id).first_or_404()
+    
+    if request.method == 'POST':
+        nota.titolo = request.form.get('titolo')
+        nota.contenuto = request.form.get('contenuto')
+        nota.corso_id = request.form.get('corso_id') or None
+        
+        db.session.commit()
+        flash('Nota aggiornata con successo', 'success')
+        return redirect(url_for('docente_note'))
+    
+    # Recupera i corsi del docente per il dropdown
+    corsi = Corso.query.filter_by(docente_id=current_user.id).all()
+    
+    return render_template('docente/modifica_nota.html', nota=nota, corsi=corsi)
+
+@app.route('/docente/note/<int:nota_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['docente'])
+def docente_elimina_nota(nota_id):
+    # Recupera la nota
+    nota = Nota.query.filter_by(id=nota_id, docente_id=current_user.id).first_or_404()
+    
+    db.session.delete(nota)
+    db.session.commit()
+    
+    flash('Nota eliminata con successo', 'success')
+    return redirect(url_for('docente_note'))
+
+# Rotte per gestione docenti
+@app.route('/admin/docenti')
+@login_required
+@role_required(['admin'])
+def admin_docenti():
+    docenti = User.query.filter_by(role='docente').all()
+    return render_template('admin/docenti.html', docenti=docenti)
+
+@app.route('/admin/docenti/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuovo_docente():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        cognome = request.form.get('cognome')
+        password = request.form.get('password')
+        
+        # Verifica se l'utente esiste già
+        if User.query.filter_by(username=username).first():
+            flash('Username già in uso', 'danger')
+            return redirect(url_for('admin_nuovo_docente'))
+            
+        if User.query.filter_by(email=email).first():
+            flash('Email già in uso', 'danger')
+            return redirect(url_for('admin_nuovo_docente'))
+        
+        # Crea nuovo docente
+        docente = User(
+            username=username,
+            email=email,
+            nome=nome,
+            cognome=cognome,
+            role='docente'
+        )
+        docente.set_password(password)
+        
+        db.session.add(docente)
+        db.session.commit()
+        
+        flash('Docente creato con successo', 'success')
+        return redirect(url_for('admin_docenti'))
+        
+    return render_template('admin/nuovo_docente.html')
+
+@app.route('/admin/corsi')
+@login_required
+@role_required(['admin'])
+def admin_corsi():
+    corsi = Corso.query.all()
+    # Get timezone-aware now
+    now = datetime.now(timezone.utc)
+    
+    # Make all corso dates timezone-aware
+    for corso in corsi:
+        if corso.data_inizio.tzinfo is None:
+            corso.data_inizio = corso.data_inizio.replace(tzinfo=timezone.utc)
+        if corso.data_fine.tzinfo is None:
+            corso.data_fine = corso.data_fine.replace(tzinfo=timezone.utc)
+    
+    return render_template('admin/corsi.html', corsi=corsi, now=now)
+
+@app.route('/admin/corsi/<int:corso_id>')
+@login_required
+@role_required(['admin'])
+def admin_dettaglio_corso(corso_id):
+    corso = db.session.get(Corso, corso_id)
+    if not corso:
+        abort(404)
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    test = Test.query.filter_by(corso_id=corso_id).all()
+    
+    # Make sure each iscrizione has its discente loaded
+    for iscrizione in iscrizioni:
+        iscrizione.discente = db.session.get(User, iscrizione.discente_id)  # Use db.session.get instead of Query.get
+    
+    return render_template('admin/dettaglio_corso.html', 
+                          corso=corso, 
+                          iscrizioni=iscrizioni,
+                          test=test)
+
+@app.route('/docente/corsi/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['docente'])
+def docente_nuovo_corso():
+    if request.method == 'POST':
+        titolo = request.form.get('titolo')
+        descrizione = request.form.get('descrizione')
+        ore_totali = float(request.form.get('ore_totali'))
+        data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
+        data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
+        progetto_id = request.form.get('progetto_id')
+        progetto_riferimento = request.form.get('progetto_riferimento')
+        
+        # For docente, we use the current user's ID
+        docente_id = current_user.id
+        modalita = request.form.get('modalita', 'in_house')
+        indirizzo = request.form.get('indirizzo')
+        link_webinar = request.form.get('link_webinar')
+        piattaforma = request.form.get('piattaforma')  # Add this line
+        orario = request.form.get('orario')
+        
+        # Validate modalita-specific fields
+        if modalita == 'in_house' and not indirizzo:
+            flash('Per la modalità in-house è necessario specificare l\'indirizzo', 'danger')
+            progetti = Progetto.query.all()
+            return render_template('docente/nuovo_corso.html', progetti=progetti)
+        
+        if modalita == 'webinar' and not link_webinar:
+            flash('Per la modalità webinar è necessario specificare il link', 'danger')
+            progetti = Progetto.query.all()
+            return render_template('docente/nuovo_corso.html', progetti=progetti)
+            
+        if modalita == 'e_learning' and not piattaforma:  # Add this validation
+            flash('Per la modalità e-learning è necessario specificare la piattaforma', 'danger')
+            progetti = Progetto.query.all()
+            return render_template('docente/nuovo_corso.html', progetti=progetti)
+
+        corso = Corso(
+            titolo=titolo,
+            descrizione=descrizione,
+            ore_totali=ore_totali,
+            data_inizio=data_inizio,
+            data_fine=data_fine,
+            progetto_riferimento=progetto_riferimento,
+            progetto_id=progetto_id,
+            docente_id=docente_id,
+            modalita=modalita,
+            indirizzo=indirizzo,
+            link_webinar=link_webinar,
+            piattaforma=piattaforma,  # Add this line
+            orario=orario
+        )
+        
+        db.session.add(corso)
+        db.session.commit()
+        
+        flash('Corso creato con successo', 'success')
+        return redirect(url_for('docente_corsi'))
+    
+    progetti = Progetto.query.all()
+    return render_template('docente/nuovo_corso.html', progetti=progetti)
+
+@app.route('/admin/corsi/<int:corso_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_elimina_corso(corso_id):
+    corso = db.session.get(Corso, corso_id)
+    if not corso:
+        abort(404)
+    
+    # Check if there are any enrollments for this course
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    
+    # Delete all enrollments and related data
+    for iscrizione in iscrizioni:
+        # Delete test results
+        risultati = RisultatoTest.query.filter_by(iscrizione_id=iscrizione.id).all()
+        for risultato in risultati:
+            db.session.delete(risultato)
+        
+        # Delete certificates
+        attestati = Attestato.query.filter_by(iscrizione_id=iscrizione.id).all()
+        for attestato in attestati:
+            db.session.delete(attestato)
+        
+        db.session.delete(iscrizione)
+    
+    # Delete tests associated with this course
+    tests = Test.query.filter_by(corso_id=corso_id).all()
+    for test in tests:
+        db.session.delete(test)
+    
+    # Delete the course
+    db.session.delete(corso)
+    db.session.commit()
+    
+    flash('Corso eliminato con successo', 'success')
+    return redirect(url_for('admin_corsi'))
+
+@app.route('/admin/corsi/<int:corso_id>/iscrizioni/<int:iscrizione_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_modifica_iscrizione(corso_id, iscrizione_id):
+    corso = db.session.get(Corso, corso_id)
+    if not corso:
+        abort(404)
+    iscrizione = db.session.get(Iscrizione, iscrizione_id)
+    if not iscrizione:
+        abort(404)
+    
+    if request.method == 'POST':
+        # Debug prints
+        print("Form data:", request.form)
+        print("CSRF token in form:", request.form.get('csrf_token'))
+        # Remove the line that's causing the error
+        # print("CSRF token in session:", csrf._get_token())
+        
+        try:
+            # Update enrollment information
+            ore_frequentate = request.form.get('ore_frequentate', 0)
+            print("Ore frequentate (raw):", ore_frequentate)
+            
+            # Convert to float with error handling
+            iscrizione.ore_frequentate = float(ore_frequentate) if ore_frequentate else 0
+            
+            db.session.commit()
+            flash('Iscrizione aggiornata con successo', 'success')
+            return redirect(url_for('admin_dettaglio_corso', corso_id=corso_id))
+        except Exception as e:
+            print("Error updating iscrizione:", str(e))
+            flash(f'Errore durante l\'aggiornamento: {str(e)}', 'danger')
+            return redirect(url_for('admin_modifica_iscrizione', corso_id=corso_id, iscrizione_id=iscrizione_id))
+    
+    return render_template('admin/modifica_iscrizione.html', corso=corso, iscrizione=iscrizione)
+
+@app.route('/admin/corsi/<int:corso_id>/iscrizioni/<int:iscrizione_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_elimina_iscrizione(corso_id, iscrizione_id):
+    iscrizione = db.session.get(Iscrizione, iscrizione_id)
+    if not iscrizione:
+        abort(404)
+    
+    # Check if there are any test results associated with this enrollment
+    risultati = RisultatoTest.query.filter_by(iscrizione_id=iscrizione_id).all()
+    for risultato in risultati:
+        db.session.delete(risultato)
+    
+    # Check if there are any attestati associated with this enrollment
+    attestati = Attestato.query.filter_by(iscrizione_id=iscrizione_id).all()
+    for attestato in attestati:
+        db.session.delete(attestato)
+    
+    db.session.delete(iscrizione)
+    db.session.commit()
+    
+    flash('Iscrizione eliminata con successo', 'success')
+    return redirect(url_for('admin_dettaglio_corso', corso_id=corso_id))
+
+# Rotte per gestione test
+@app.route('/admin/test')
+@login_required
+@role_required(['admin'])
+def admin_test():
+    test = Test.query.all()
+    return render_template('admin/test.html', test=test)
+
+@app.route('/admin/test/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuovo_test():
+    corsi = Corso.query.all()
+    
+    if request.method == 'POST':
+        corso_id = request.form.get('corso_id')
+        tipo = request.form.get('tipo')
+        titolo = request.form.get('titolo')
+        forms_link = request.form.get('forms_link')
+        
+        # Gestione upload file
+        file = request.files.get('file')
+        file_path = None
+        
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'test', filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            file.save(file_path)
+        
+        # Crea nuovo test
+        test = Test(
+            corso_id=corso_id,
+            tipo=tipo,
+            titolo=titolo,
+            file_path=file_path,
+            forms_link=forms_link
+        )
+        
+        db.session.add(test)
+        db.session.commit()
+        
+        flash('Test creato con successo', 'success')
+        return redirect(url_for('admin_test'))
+        
+    return render_template('admin/nuovo_test.html', corsi=corsi)
+
+# Add this new route for editing tests
+@app.route('/admin/test/<int:test_id>/modifica', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_modifica_test(test_id):
+    test = Test.query.get_or_404(test_id)
+    corsi = Corso.query.all()
+    
+    if request.method == 'POST':
+        # Update test information
+        test.corso_id = request.form.get('corso_id')
+        test.tipo = request.form.get('tipo')
+        test.titolo = request.form.get('titolo')
+        test.forms_link = request.form.get('forms_link')
+        
+        # Handle file upload if a new file is provided
+        file = request.files.get('file')
+        if file and file.filename != '':
+            # Save the new file
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'test', filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            file.save(file_path)
+            
+            # Update the file path
+            test.file_path = file_path
+        
+        db.session.commit()
+        flash('Test aggiornato con successo', 'success')
+        return redirect(url_for('admin_test'))
+    
+    return render_template('admin/modifica_test.html', test=test, corsi=corsi)
+
+# Add this route for deleting tests
+@app.route('/admin/test/<int:test_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_elimina_test(test_id):
+    test = Test.query.get_or_404(test_id)
+    
+    # Delete all test results associated with this test
+    risultati = RisultatoTest.query.filter_by(test_id=test_id).all()
+    for risultato in risultati:
+        db.session.delete(risultato)
+    
+    # Delete the test
+    db.session.delete(test)
+    db.session.commit()
+    
+    flash('Test eliminato con successo', 'success')
+    return redirect(url_for('admin_test'))   
+
+@app.route('/admin/test/<int:test_id>/risultati', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_test_risultati(test_id):
+    test = Test.query.get_or_404(test_id)
+    corso = Corso.query.get(test.corso_id)
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+    
+    if request.method == 'POST':
+        for iscrizione in iscrizioni:
+            punteggio_key = f'punteggio_{iscrizione.id}'
+            superato_key = f'superato_{iscrizione.id}'
+            
+            if punteggio_key in request.form:
+                punteggio = float(request.form.get(punteggio_key, 0))
+                superato = superato_key in request.form
+                
+                # Check if result already exists
+                risultato = RisultatoTest.query.filter_by(
+                    test_id=test_id,
+                    iscrizione_id=iscrizione.id
+                ).first()
+                
+                if risultato:
+                    # Update existing result
+                    risultato.punteggio = punteggio
+                    risultato.superato = superato
+                else:
+                    # Create new result
+                    risultato = RisultatoTest(
+                        test_id=test_id,
+                        iscrizione_id=iscrizione.id,
+                        punteggio=punteggio,
+                        superato=superato
+                    )
+                    db.session.add(risultato)
+        
+        db.session.commit()
+        flash('Risultati del test salvati con successo', 'success')
+        return redirect(url_for('admin_test'))
+    
+    # Get existing results
+    risultati = {}
+    for iscrizione in iscrizioni:
+        risultato = RisultatoTest.query.filter_by(
+            test_id=test_id,
+            iscrizione_id=iscrizione.id
+        ).first()
+        
+        if risultato:
+            risultati[iscrizione.id] = risultato
+    
+    return render_template('admin/test_risultati.html', 
+                          test=test, 
+                          corso=corso, 
+                          iscrizioni=iscrizioni,
+                          risultati=risultati)
+
+# Rotte per gestione attestati
+@app.route('/admin/attestati')
+@login_required
+@role_required(['admin'])
+def admin_attestati():
+    attestati = Attestato.query.all()
+    
+    # Get related data for each attestato
+    for attestato in attestati:
+        attestato.iscrizione = Iscrizione.query.get(attestato.iscrizione_id)
+        if attestato.iscrizione:
+            attestato.discente = User.query.get(attestato.iscrizione.discente_id)
+            attestato.corso = Corso.query.get(attestato.iscrizione.corso_id)
+    
+    return render_template('admin/attestati.html', attestati=attestati)
+
+# Add this route after your admin_attestati route
+@app.route('/admin/report')
+@login_required
+@role_required(['admin'])
+def admin_report():
+    # Get data for reports
+    progetti = Progetto.query.all()
+    corsi = Corso.query.all()
+    discenti = User.query.filter_by(role='discente').all()
+    docenti = User.query.filter_by(role='docente').all()
+    
+    # You can add more complex statistics here
+    
+    return render_template('admin/report.html', 
+                          progetti=progetti,
+                          corsi=corsi,
+                          discenti=discenti,
+                          docenti=docenti)
+
+@app.route('/admin/attestati/nuovo', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_nuovo_attestato():
+    iscrizioni = Iscrizione.query.all()
+    
+    if request.method == 'POST':
+        iscrizione_id = request.form.get('iscrizione_id')
+        
+        if not iscrizione_id:
+            flash('Seleziona un\'iscrizione', 'danger')
+            return redirect(url_for('admin_nuovo_attestato'))
+            
+        iscrizione = Iscrizione.query.get_or_404(int(iscrizione_id))
+        discente = User.query.get_or_404(iscrizione.discente_id)
+        corso = Corso.query.get_or_404(iscrizione.corso_id)
+        
+        # Check if attestato already exists
+        existing_attestato = Attestato.query.filter_by(iscrizione_id=iscrizione_id).first()
+        if existing_attestato:
+            flash('Attestato già esistente per questa iscrizione', 'warning')
+            return redirect(url_for('admin_nuovo_attestato'))
+        
+        # Check if the discente has completed all course hours
+        if iscrizione.ore_frequentate < corso.ore_totali:
+            flash(f'Il discente non ha completato tutte le ore del corso ({iscrizione.ore_frequentate}/{corso.ore_totali})', 'danger')
+            return redirect(url_for('admin_nuovo_attestato'))
+        
+        # Check if the discente has passed the final test with at least 85%
+        test_finale = Test.query.filter_by(corso_id=corso.id, tipo='finale').first()
+        if test_finale:
+            risultato = RisultatoTest.query.filter_by(
+                test_id=test_finale.id,
+                iscrizione_id=iscrizione.id
+            ).first()
+            
+            if not risultato:
+                flash('Il discente non ha sostenuto il test finale', 'danger')
+                return redirect(url_for('admin_nuovo_attestato'))
+            
+            if not risultato.punteggio or risultato.punteggio < 85:
+                flash(f'Il discente non ha ottenuto almeno l\'85% nel test finale (punteggio: {risultato.punteggio}%)', 'danger')
+                return redirect(url_for('admin_nuovo_attestato'))
+                
+            valutazione = f"{risultato.punteggio}/100"
+        else:
+            valutazione = "N/A"
+        
+        # Generate PDF attestato
+        try:
+            # Create a unique filename
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            filename = f"attestato_{discente.cognome}_{discente.nome}_{timestamp}.pdf"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'attestati', filename)
+            
+            # Generate the PDF
+            generate_attestato_pdf(
+            file_path,
+            discente.nome,
+            discente.cognome,
+            discente.codice_fiscale or "N/A",
+            discente.unita_org or "N/A",  # Using unita_org as Comune di appartenenza
+            corso.titolo,
+            f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
+            valutazione,
+            corso.progetto.titolo if corso.progetto else "N/A",
+            corso.modalita  # Add this line
+        )
+                        # Create attestato record
+            attestato = Attestato(
+                iscrizione_id=iscrizione_id,
+                file_path=file_path,
+                data_generazione=datetime.utcnow()
+            )
+            
+            db.session.add(attestato)
+            db.session.commit()
+            
+            flash('Attestato generato con successo', 'success')
+            return redirect(url_for('admin_attestati'))
+            
+        except Exception as e:
+            flash(f'Errore durante la generazione dell\'attestato: {str(e)}', 'danger')
+            return redirect(url_for('admin_nuovo_attestato'))
+        
+    return render_template('admin/nuovo_attestato.html', iscrizioni=iscrizioni)
+
+@app.route('/admin/attestati/genera/<int:iscrizione_id>', methods=['GET', 'POST'])
+@login_required
+def generate_attestato_pdf(file_path, nome, cognome, codice_fiscale, comune, corso_titolo, ore_corso, valutazione, progetto_titolo, modalita=None):
+    """Generate a PDF attestato with background image and participant data"""
+    
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # Create a PDF with ReportLab
+    buffer = BytesIO()
+    
+    # Use A4 landscape
+    width, height = A4[1], A4[0]  # Swap dimensions for landscape
+    
+    # Create the PDF document
+    c = canvas.Canvas(buffer, pagesize=(width, height))
+    
+    # Add a background image if available
+    background_path = os.path.join(app.root_path, 'static', 'img', 'attestato_background.jpg')
+    if os.path.exists(background_path):
+        c.drawImage(background_path, 0, 0, width, height)
+    
+    # Set font and size for title
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width/2, height-100, "ATTESTATO DI PARTECIPAZIONE")
+    
+    # Set font and size for content
+    c.setFont("Helvetica", 14)
+    
+    # Add current date
+    today = datetime.now().strftime("%d/%m/%Y")
+    c.drawRightString(width-50, height-150, f"Data: {today}")
+    
+    # Add participant information
+    y_position = height - 200
+    line_height = 25
+    
+    c.drawString(50, y_position, f"Si attesta che:")
+    y_position -= line_height
+    
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, y_position, f"{nome} {cognome}")
+    y_position -= line_height
+    
+    c.setFont("Helvetica", 14)
+    c.drawString(50, y_position, f"Codice Fiscale: {codice_fiscale}")
+    y_position -= line_height
+    
+    c.drawString(50, y_position, f"Comune/Ente: {comune}")
+    y_position -= line_height * 2
+    
+    c.drawString(50, y_position, f"Ha partecipato con successo al corso:")
+    y_position -= line_height
+    
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, y_position, f"{corso_titolo}")
+    y_position -= line_height * 2
+    
+    c.setFont("Helvetica", 14)
+    c.drawString(50, y_position, f"Ore di frequenza: {ore_corso}")
+    y_position -= line_height
+    
+    c.drawString(50, y_position, f"Valutazione finale: {valutazione}")
+    y_position -= line_height
+    
+    c.drawString(50, y_position, f"Progetto: {progetto_titolo}")
+    y_position -= line_height
+    
+    # Add modalita if provided
+    if modalita:
+        modalita_text = {
+            'in_house': 'In House',
+            'webinar': 'Webinar',
+            'e_learning': 'E-Learning'
+        }.get(modalita, modalita)
+        
+        c.drawString(50, y_position, f"Modalità: {modalita_text}")
+        y_position -= line_height * 2
+    else:
+        y_position -= line_height
+    
+    # Add signature line
+    c.line(width/2 - 100, y_position, width/2 + 100, y_position)
+    y_position -= 20
+    c.drawCentredString(width/2, y_position, "Firma del responsabile")
+    
+    # Save the PDF
+    c.save()
+    
+    # Get the PDF from the buffer and save it to the file
+    with open(file_path, 'wb') as f:
+        f.write(buffer.getvalue())
+    
+    return file_path
+
+# Add this route after the admin_attestati route
+
+@app.route('/admin/attestati/<int:attestato_id>/elimina', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_elimina_attestato(attestato_id):
+    attestato = Attestato.query.get_or_404(attestato_id)
+    
+    try:
+        # Delete the file if it exists
+        if attestato.file_path and os.path.exists(attestato.file_path):
+            os.remove(attestato.file_path)
+        
+        # Delete the database record
+        db.session.delete(attestato)
+        db.session.commit()
+        
+        flash('Attestato eliminato con successo', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore durante l\'eliminazione: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_attestati'))
+
+# Keep the rest of the code as is
+# Move the role_required decorator definition before it's used
+@login_manager.user_loader
+def load_user(user_id):
+    # Replace Query.get() with Session.get()
+    return db.session.get(User, int(user_id))
+
+@app.route('/download/attestato/<int:attestato_id>')
+@login_required
+def download_attestato(attestato_id):
+    attestato = Attestato.query.get_or_404(attestato_id)
+    
+    # Check permissions
+    iscrizione = Iscrizione.query.get(attestato.iscrizione_id)
+    if not iscrizione:
+        abort(404)
+        
+    # Admin can download any attestato
+    # Discenti can only download their own attestati
+    if current_user.role != 'admin' and current_user.id != iscrizione.discente_id:
+        abort(403)
+    
+    if not attestato.file_path or not os.path.exists(attestato.file_path):
+        flash('File non trovato', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    directory = os.path.dirname(attestato.file_path)
+    filename = os.path.basename(attestato.file_path)
+    
+    return send_from_directory(directory, filename, as_attachment=True)
+
+# Add this new function to automatically check and generate attestati
+# Add this route after the admin_nuovo_attestato route
+
+@app.route('/admin/attestati/genera-automatici')
+@login_required
+@role_required(['admin'])
+def admin_genera_attestati_automatici():
+    # Find all eligible iscrizioni for attestati
+    iscrizioni_eligible = []
+    
+    # Get all iscrizioni
+    iscrizioni = Iscrizione.query.all()
+    
+    # Track results
+    generati = 0
+    saltati = 0
+    errori = []
+    
+    for iscrizione in iscrizioni:
+        try:
+            # Skip if attestato already exists
+            existing_attestato = Attestato.query.filter_by(iscrizione_id=iscrizione.id).first()
+            if existing_attestato:
+                saltati += 1
+                continue
+            
+            # Get related data
+            discente = User.query.get_or_404(iscrizione.discente_id)
+            corso = Corso.query.get_or_404(iscrizione.corso_id)
+            
+            # Check if the discente has completed all course hours
+            if iscrizione.ore_frequentate < corso.ore_totali:
+                saltati += 1
+                continue
+            
+            # Check if the discente has passed the final test
+            test_finale = Test.query.filter_by(corso_id=corso.id, tipo='finale').first()
+            if test_finale:
+                risultato = RisultatoTest.query.filter_by(
+                    test_id=test_finale.id,
+                    iscrizione_id=iscrizione.id
+                ).first()
+                
+                if not risultato or not risultato.superato or risultato.punteggio < 85:
+                    saltati += 1
+                    continue
+                    
+                valutazione = f"{risultato.punteggio}/100"
+            else:
+                # If no final test exists, we'll use N/A for valutazione
+                valutazione = "N/A"
+            
+            # Generate PDF attestato
+            # Create a unique filename
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            filename = f"attestato_{discente.cognome}_{discente.nome}_{timestamp}.pdf"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'attestati', filename)
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # Generate the PDF
+            generate_attestato_pdf(
+            file_path,
+            discente.nome,
+            discente.cognome,
+            discente.codice_fiscale or "N/A",
+            discente.unita_org or "N/A",
+            corso.titolo,
+            f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
+            valutazione,
+            corso.progetto.titolo if corso.progetto else "N/A",
+            corso.modalita  # Add this line
+            )
+            
+            # Create attestato record
+            attestato = Attestato(
+                iscrizione_id=iscrizione.id,
+                file_path=file_path,
+                data_generazione=datetime.utcnow()
+            )
+            
+            db.session.add(attestato)
+            generati += 1
+            
+        except Exception as e:
+            errori.append(f"Errore per iscrizione {iscrizione.id}: {str(e)}")
+    
+    # Commit all changes at once
+    if generati > 0:
+        db.session.commit()
+    
+    # Flash appropriate messages
+    if generati > 0:
+        flash(f'Generati {generati} attestati automaticamente', 'success')
+    if saltati > 0:
+        flash(f'Saltati {saltati} iscrizioni non idonee', 'info')
+    if errori:
+        for errore in errori[:5]:  # Show only first 5 errors
+            flash(errore, 'danger')
+        if len(errori) > 5:
+            flash(f'... e altri {len(errori) - 5} errori', 'danger')
+    
+    return redirect(url_for('admin_attestati'))
+
+@app.route('/admin/report/progetto')
+@login_required
+@role_required(['admin'])
+def admin_report_progetto():
+    progetto_id = request.args.get('progetto_id', type=int)
+    if not progetto_id:
+        flash('Seleziona un progetto', 'danger')
+        return redirect(url_for('admin_report'))
+        
+    progetto = Progetto.query.get_or_404(progetto_id)
+    corsi = Corso.query.filter_by(progetto_id=progetto_id).all()
+    return render_template('admin/report_progetto.html', progetto=progetto, corsi=corsi)
+
+@app.route('/admin/report/corso')
+@login_required
+@role_required(['admin'])
+def admin_report_corso():
+    corso_id = request.args.get('corso_id', type=int)
+    if not corso_id:
+        flash('Seleziona un corso', 'danger')
+        return redirect(url_for('admin_report'))
+        
+    corso = Corso.query.get_or_404(corso_id)
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
+    return render_template('admin/report_corso.html', corso=corso, iscrizioni=iscrizioni)
+
+
+@app.route('/admin/report/export/excel', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_report_export_excel():
+    # Get form data
+    tipo_report = request.form.get('tipo_report', 'default')
+    id_elemento = request.form.get('id_elemento')
+    
+    # Create a new Excel workbook
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    
+    # Create a worksheet
+    worksheet = workbook.add_worksheet()
+    
+    # Create header format
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4CAF50',  # Use bg_color instead of color
+        'font_color': 'white',  # Use font_color for text color
+        'align': 'center',
+        'valign': 'vcenter',
+        'border': 1
+    })
+    
+    # Formattazione celle
+    cell_format = workbook.add_format({
+        'border': 1,
+        'align': 'left',
+        'valign': 'vcenter'
+    })
+    
+    if tipo_report == 'progetti':
+        # Report di tutti i progetti
+        progetti = Progetto.query.all()
+        
+        # Intestazioni
+        headers = ['ID', 'Titolo', 'Data Inizio', 'Data Fine', 'Budget', 'N. Corsi', 'N. Discenti']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        # Dati
+        for row, progetto in enumerate(progetti, start=1):
+            n_corsi = len(progetto.corsi)
+            n_discenti = User.query.filter_by(progetto_id=progetto.id, role='discente').count()
+            
+            worksheet.write(row, 0, progetto.id, cell_format)
+            worksheet.write(row, 1, progetto.titolo, cell_format)
+            worksheet.write(row, 2, progetto.data_inizio.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 3, progetto.data_fine.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 4, f"€ {progetto.budget:.2f}" if progetto.budget else "N/D", cell_format)
+            worksheet.write(row, 5, n_corsi, cell_format)
+            worksheet.write(row, 6, n_discenti, cell_format)
+        
+        filename = "report_progetti.xlsx"
+    
+    elif tipo_report == 'progetto':
+        # Report di un singolo progetto e i suoi corsi
+        progetto = Progetto.query.get_or_404(id_elemento)
+        corsi = Corso.query.filter_by(progetto_id=progetto.id).all()
+        
+        # Intestazioni progetto
+        worksheet.merge_range('A1:G1', f"Progetto: {progetto.titolo}", header_format)
+        worksheet.write(1, 0, "Data Inizio:", header_format)
+        worksheet.write(1, 1, progetto.data_inizio.strftime('%d/%m/%Y'), cell_format)
+        worksheet.write(1, 2, "Data Fine:", header_format)
+        worksheet.write(1, 3, progetto.data_fine.strftime('%d/%m/%Y'), cell_format)
+        worksheet.write(1, 4, "Budget:", header_format)
+        worksheet.write(1, 5, f"€ {progetto.budget:.2f}" if progetto.budget else "N/D", cell_format)
+        
+        # Intestazioni corsi
+        headers = ['ID', 'Titolo Corso', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']
+        for col, header in enumerate(headers):
+            worksheet.write(3, col, header, header_format)
+        
+        # Dati corsi
+        for row, corso in enumerate(corsi, start=4):
+            docente = User.query.get(corso.docente_id)
+            n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
+            
+            worksheet.write(row, 0, corso.id, cell_format)
+            worksheet.write(row, 1, corso.titolo, cell_format)
+            worksheet.write(row, 2, corso.ore_totali, cell_format)
+            worksheet.write(row, 3, corso.data_inizio.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 4, corso.data_fine.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 5, f"{docente.nome} {docente.cognome}" if docente else "N/D", cell_format)
+            worksheet.write(row, 6, n_iscritti, cell_format)
+        
+        filename = f"report_progetto_{progetto.id}.xlsx"
+    
+    elif tipo_report == 'corso':
+        # Report di un singolo corso e i suoi discenti
+        corso = Corso.query.get_or_404(id_elemento)
+        iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+        
+        # Intestazioni corso
+        worksheet.merge_range('A1:G1', f"Corso: {corso.titolo}", header_format)
+        worksheet.write(1, 0, "Data Inizio:", header_format)
+        worksheet.write(1, 1, corso.data_inizio.strftime('%d/%m/%Y'), cell_format)
+        worksheet.write(1, 2, "Data Fine:", header_format)
+        worksheet.write(1, 3, corso.data_fine.strftime('%d/%m/%Y'), cell_format)
+        worksheet.write(1, 4, "Ore Totali:", header_format)
+        worksheet.write(1, 5, corso.ore_totali, cell_format)
+        
+        docente = User.query.get(corso.docente_id)
+        worksheet.write(2, 0, "Docente:", header_format)
+        worksheet.write(2, 1, f"{docente.nome} {docente.cognome}" if docente else "N/D", cell_format)
+        
+        # Intestazioni discenti
+        headers = ['ID', 'Nome', 'Cognome', 'Email', 'Codice Fiscale', 'Ore Frequentate', 'Progetto']
+        for col, header in enumerate(headers):
+            worksheet.write(4, col, header, header_format)
+        
+        # Dati discenti
+        for row, iscrizione in enumerate(iscrizioni, start=5):
+            discente = User.query.get(iscrizione.discente_id)
+            progetto = Progetto.query.get(discente.progetto_id) if discente.progetto_id else None
+            
+            worksheet.write(row, 0, discente.id, cell_format)
+            worksheet.write(row, 1, discente.nome, cell_format)
+            worksheet.write(row, 2, discente.cognome, cell_format)
+            worksheet.write(row, 3, discente.email, cell_format)
+            worksheet.write(row, 4, discente.codice_fiscale or "N/D", cell_format)
+            worksheet.write(row, 5, iscrizione.ore_frequentate, cell_format)
+            worksheet.write(row, 6, progetto.titolo if progetto else "N/D", cell_format)
+        
+        filename = f"report_corso_{corso.id}.xlsx"
+    
+    else:
+        # Report di default con tutti i corsi
+        corsi = Corso.query.all()
+        
+        # Intestazioni
+        headers = ['ID', 'Titolo', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        # Dati
+        for row, corso in enumerate(corsi, start=1):
+            docente = User.query.get(corso.docente_id)
+            n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
+            
+            worksheet.write(row, 0, corso.id, cell_format)
+            worksheet.write(row, 1, corso.titolo, cell_format)
+            worksheet.write(row, 2, corso.ore_totali, cell_format)
+            worksheet.write(row, 3, corso.data_inizio.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 4, corso.data_fine.strftime('%d/%m/%Y'), cell_format)
+            worksheet.write(row, 5, f"{docente.nome} {docente.cognome}" if docente else "N/D", cell_format)
+            worksheet.write(row, 6, n_iscritti, cell_format)
+        
+        filename = "report_corsi.xlsx"
+    
+    # Adatta larghezza colonne
+    for i, width in enumerate([10, 40, 15, 15, 15, 25, 15]):
+        worksheet.set_column(i, i, width)
+    
+    # Chiudi il workbook
+    workbook.close()
+    
+    # Prepara la risposta
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    response.headers["Content-type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    
+    return response
+
+@app.route('/admin/report/export/pdf', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_report_export_pdf():
+    tipo_report = request.form.get('tipo_report')
+    id_elemento = request.form.get('id_elemento')
+    
+    # Crea un file PDF in memoria
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4)
+    elements = []
+    
+    # Stili
+    styles = getSampleStyleSheet()
+    title_style = styles['Heading1']
+    subtitle_style = styles['Heading2']
+    normal_style = styles['Normal']
+    
+    if tipo_report == 'progetti':
+        # Report di tutti i progetti
+        progetti = Progetto.query.all()
+        
+        # Titolo
+        elements.append(Paragraph("Report Progetti", title_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        # Tabella
+        data = [['ID', 'Titolo', 'Data Inizio', 'Data Fine', 'Budget', 'N. Corsi', 'N. Discenti']]
+        
+        for progetto in progetti:
+            n_corsi = len(progetto.corsi)
+            n_discenti = User.query.filter_by(progetto_id=progetto.id, role='discente').count()
+            
+            data.append([
+                str(progetto.id),
+                progetto.titolo,
+                progetto.data_inizio.strftime('%d/%m/%Y'),
+                progetto.data_fine.strftime('%d/%m/%Y'),
+                f"€ {progetto.budget:.2f}" if progetto.budget else "N/D",
+                str(n_corsi),
+                str(n_discenti)
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+        filename = "report_progetti.pdf"
+    
+    elif tipo_report == 'progetto':
+        # Report di un singolo progetto e i suoi corsi
+        progetto = Progetto.query.get_or_404(id_elemento)
+        corsi = Corso.query.filter_by(progetto_id=progetto.id).all()
+        
+        # Titolo e info progetto
+        elements.append(Paragraph(f"Report Progetto: {progetto.titolo}", title_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        info_progetto = [
+            ['Data Inizio', progetto.data_inizio.strftime('%d/%m/%Y')],
+            ['Data Fine', progetto.data_fine.strftime('%d/%m/%Y')],
+            ['Budget', f"€ {progetto.budget:.2f}" if progetto.budget else "N/D"]
+        ]
+        
+        table_info = Table(info_progetto)
+        table_info.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (1, 0), (1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table_info)
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        elements.append(Paragraph("Corsi del Progetto", subtitle_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        # Tabella corsi
+        if corsi:
+            data_corsi = [['ID', 'Titolo', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']]
+            
+            for corso in corsi:
+                docente = User.query.get(corso.docente_id)
+                n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
+                
+                data_corsi.append([
+                    str(corso.id),
+                    corso.titolo,
+                    str(corso.ore_totali),
+                    corso.data_inizio.strftime('%d/%m/%Y'),
+                    corso.data_fine.strftime('%d/%m/%Y'),
+                    f"{docente.nome} {docente.cognome}" if docente else "N/D",
+                    str(n_iscritti)
+                ])
+            
+            table_corsi = Table(data_corsi)
+            table_corsi.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elements.append(table_corsi)
+        else:
+            elements.append(Paragraph("Nessun corso associato a questo progetto.", normal_style))
+        
+        filename = f"report_progetto_{progetto.id}.pdf"
+    
+    elif tipo_report == 'corso':
+        # Report di un singolo corso e i suoi discenti
+        corso = Corso.query.get_or_404(id_elemento)
+        iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+        
+        # Titolo e info corso
+        elements.append(Paragraph(f"Report Corso: {corso.titolo}", title_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        docente = User.query.get(corso.docente_id)
+        progetto = Progetto.query.get(corso.progetto_id) if corso.progetto_id else None
+        
+        info_corso = [
+            ['Data Inizio', corso.data_inizio.strftime('%d/%m/%Y')],
+            ['Data Fine', corso.data_fine.strftime('%d/%m/%Y')],
+            ['Ore Totali', str(corso.ore_totali)],
+            ['Docente', f"{docente.nome} {docente.cognome}" if docente else "N/D"],
+            ['Progetto', progetto.titolo if progetto else "N/D"]
+        ]
+        
+        table_info = Table(info_corso)
+        table_info.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (1, 0), (1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table_info)
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        elements.append(Paragraph("Discenti Iscritti", subtitle_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        # Tabella discenti
+        if iscrizioni:
+            data_discenti = [['ID', 'Nome', 'Cognome', 'Email', 'Codice Fiscale', 'Ore Frequentate']]
+            
+            for iscrizione in iscrizioni:
+                discente = User.query.get(iscrizione.discente_id)
+                
+                data_discenti.append([
+                    str(discente.id),
+                    discente.nome,
+                    discente.cognome,
+                    discente.email,
+                    discente.codice_fiscale or "N/D",
+                    str(iscrizione.ore_frequentate)
+                ])
+            
+            table_discenti = Table(data_discenti)
+            table_discenti.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elements.append(table_discenti)
+        else:
+            elements.append(Paragraph("Nessun discente iscritto a questo corso.", normal_style))
+        
+        filename = f"report_corso_{corso.id}.pdf"
+    
+    else:
+        # Report di default con tutti i corsi
+        corsi = Corso.query.all()
+        
+        # Titolo
+        elements.append(Paragraph("Report Corsi", title_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(" ", normal_style))  # Spazio
+        
+        # Tabella
+        data = [['ID', 'Titolo', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']]
+        
+        for corso in corsi:
+            docente = User.query.get(corso.docente_id)
+            n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
+            
+            data.append([
+                str(corso.id),
+                corso.titolo,
+                str(corso.ore_totali),
+                corso.data_inizio.strftime('%d/%m/%Y'),
+                corso.data_fine.strftime('%d/%m/%Y'),
+                f"{docente.nome} {docente.cognome}" if docente else "N/D",
+                str(n_iscritti)
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+        filename = "report_corsi.pdf"
+    
+    # Costruisci il PDF
+    doc.build(elements)
+    
+    # Prepara la risposta
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    response.headers["Content-type"] = "application/pdf"
+    
+    return response
+
+@app.route('/discente/dashboard')
+@login_required
+@role_required(['discente'])
+def discente_dashboard():
+    # Get current date for comparisons
+    now = datetime.utcnow()
+    
+    # Get user's enrollments
+    iscrizioni = Iscrizione.query.filter_by(discente_id=current_user.id).all()
+    
+    # Get user's certificates
+    attestati = Attestato.query.join(Iscrizione).filter(Iscrizione.discente_id == current_user.id).all()
+    
+    # Count completed courses - add a check for None
+    corsi_completati = sum(1 for i in iscrizioni if i.corso is not None and i.corso.data_fine < now)
+    
+    return render_template('discente/dashboard.html', 
+                          iscrizioni=iscrizioni, 
+                          attestati=attestati,
+                          corsi_completati=corsi_completati,
+                          now=now)
+# Rotte per discenti
+@app.route('/discente/corsi')
+@login_required
+@role_required(['discente'])
+def discente_corsi():
+    # Aggiungi questa riga per definire 'now'
+    now = datetime.utcnow()
+    
+    iscrizioni = Iscrizione.query.filter_by(discente_id=current_user.id).all()
+    return render_template('discente/corsi.html', iscrizioni=iscrizioni, now=now)
+
+@app.route('/discente/attestati')
+@login_required
+@role_required(['discente'])
+def discente_attestati():
+    attestati = Attestato.query.join(Iscrizione).filter(Iscrizione.discente_id == current_user.id).all()
+    return render_template('discente/attestati.html', attestati=attestati)
+
+@app.route('/discente/corsi/<int:corso_id>')
+@login_required
+@role_required(['discente'])
+def discente_dettaglio_corso(corso_id):
+    corso = Corso.query.get_or_404(corso_id)
+    iscrizione = Iscrizione.query.filter_by(corso_id=corso_id, discente_id=current_user.id).first_or_404()
+    test = Test.query.filter_by(corso_id=corso_id).all()
+    
+    # Get test results for this user through the iscrizione
+    risultati = RisultatoTest.query.filter_by(iscrizione_id=iscrizione.id).all()
+    risultati_dict = {r.test_id: r for r in risultati}
+    
+    # Add a helper function to get results for each test
+    def get_risultato(test_obj):
+        return risultati_dict.get(test_obj.id)
+    
+    # Add the current datetime for template comparison
+    now = datetime.utcnow()
+    
+    return render_template('discente/dettaglio_corso.html', 
+                          corso=corso, 
+                          iscrizione=iscrizione,
+                          test=test,
+                          risultati_dict=risultati_dict,
+                          get_risultato=get_risultato,
+                          now=now)
+
+@app.route('/discente/corsi/disponibili')
+@login_required
+@role_required(['discente'])
+def discente_corsi_disponibili():
+    # Get all courses
+    corsi = Corso.query.all()
+    
+    # Get courses the user is already enrolled in
+    iscrizioni_esistenti = [i.corso_id for i in Iscrizione.query.filter_by(discente_id=current_user.id).all()]
+    
+    # Filter out courses the user is already enrolled in
+    corsi_disponibili = [c for c in corsi if c.id not in iscrizioni_esistenti]
+    
+    now = datetime.utcnow()
+    
+    return render_template('discente/corsi_disponibili.html', 
+                          corsi=corsi_disponibili,
+                          now=now)
+
+@app.route('/discente/corsi/<int:corso_id>/iscrizione', methods=['POST'])
+@login_required
+@role_required(['discente'])
+def discente_iscrizione_corso(corso_id):
+    # Check if course exists
+    corso = Corso.query.get_or_404(corso_id)
+    
+    # Check if user is already enrolled
+    iscrizione_esistente = Iscrizione.query.filter_by(corso_id=corso_id, discente_id=current_user.id).first()
+    if iscrizione_esistente:
+        flash('Sei già iscritto a questo corso', 'warning')
+        return redirect(url_for('discente_corsi_disponibili'))
+    
+    # Create new enrollment
+    iscrizione = Iscrizione(
+        discente_id=current_user.id,
+        corso_id=corso_id,
+        ore_frequentate=0
+    )
+    
+    db.session.add(iscrizione)
+    db.session.commit()
+    
+    flash('Iscrizione effettuata con successo', 'success')
+    return redirect(url_for('discente_dashboard'))
+
+@app.route('/discente/test/<int:test_id>/risultato')
+@login_required
+@role_required(['discente'])
+def discente_visualizza_risultato(test_id):
+    # Get the test
+    test = Test.query.get_or_404(test_id)
+    
+    # Get the enrollment for this course
+    iscrizione = Iscrizione.query.filter_by(
+        discente_id=current_user.id,
+        corso_id=test.corso_id
+    ).first_or_404()
+    
+    # Get the test result
+    risultato = RisultatoTest.query.filter_by(
+        test_id=test_id,
+        iscrizione_id=iscrizione.id
+    ).first_or_404()
+    
+    return render_template('discente/risultato_test.html', 
+                          test=test, 
+                          risultato=risultato,
+                          corso=test.corso)
+
+@app.route('/uploads/<path:filename>')
+@login_required
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/profilo', methods=['GET', 'POST'])
+@login_required
+def profilo():
+    if request.method == 'POST':
+        # Update user information
+        current_user.nome = request.form.get('nome')
+        current_user.cognome = request.form.get('cognome')
+        current_user.email = request.form.get('email')
+        
+        # Check if password is being updated
+        password = request.form.get('password')
+        if password and password.strip():
+            current_user.set_password(password)
+        
+        db.session.commit()
+        flash('Profilo aggiornato con successo', 'success')
+        return redirect(url_for('profilo'))
+    
+    return render_template('profilo.html')
+
+
+# Gestione errori
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('errors/403.html'), 403
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('errors/500.html'), 500
+
+@app.route('/setup-templates')
+def setup_templates():
+    # Create directories if they don't exist
+    for dir_path in [
+        'templates',
+        'templates/admin',
+        'templates/docente',
+        'templates/discente',
+        'templates/errors',
+        'static',
+        'static/css',
+        'static/js',
+        'static/img',
+        'uploads'
+    ]:
+        full_path = os.path.join(os.path.dirname(__file__), dir_path)
+        if not os.path.exists(full_path):
+            os.makedirs(full_path)
+    
+    # Create a simple base template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/base.html'), 'w') as f:
+        f.write('''<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Gestione Corsi PNRR{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Gestione Corsi PNRR</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.role == 'admin' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_utenti') }}">Utenti</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_corsi') }}">Corsi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_test') }}">Test</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_attestati') }}">Attestati</a>
+                            </li>
+                        {% elif current_user.role == 'docente' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('docente_dashboard') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('docente_corsi') }}">Corsi</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('discente_dashboard') }}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('discente_corsi') }}">Corsi</a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>''')
+    
+    # Create login template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/login.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Login - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">Login</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Accedi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin dashboard template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/dashboard.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard Amministratore</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Discenti</h5>
+                <p class="card-text display-4">{{ discenti_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Corsi</h5>
+                <p class="card-text display-4">{{ corsi_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Test Completati</h5>
+                <p class="card-text display-4">{{ test_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Attestati</h5>
+                <p class="card-text display-4">{{ attestati_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Corsi Recenti</h5>
+        <a href="{{ url_for('admin_corsi') }}" class="btn btn-sm btn-primary">Vedi Tutti</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Iscritti</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if corsi %}
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.iscrizioni|length }}</td>
+                            <td>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun corso disponibile</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin users template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/utenti.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Gestione Utenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Utenti</h1>
+    <a href="{{ url_for('admin_nuovo_utente') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nuovo Utente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utente in utenti %}
+                    <tr>
+                        <td>{{ utente.id }}</td>
+                        <td>{{ utente.username }}</td>
+                        <td>{{ utente.nome }}</td>
+                        <td>{{ utente.cognome }}</td>
+                        <td>{{ utente.email }}</td>
+                        <td>
+                            {% if utente.role == 'admin' %}
+                                <span class="badge bg-danger">Amministratore</span>
+                            {% elif utente.role == 'docente' %}
+                                <span class="badge bg-primary">Docente</span>
+                            {% else %}
+                                <span class="badge bg-success">Discente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create new user form
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create login template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin dashboard template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/dashboard.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard Amministratore</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Discenti</h5>
+                <p class="card-text display-4">{{ discenti_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Corsi</h5>
+                <p class="card-text display-4">{{ corsi_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Test Completati</h5>
+                <p class="card-text display-4">{{ test_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Attestati</h5>
+                <p class="card-text display-4">{{ attestati_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Corsi Recenti</h5>
+        <a href="{{ url_for('admin_corsi') }}" class="btn btn-sm btn-primary">Vedi Tutti</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Iscritti</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if corsi %}
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.iscrizioni|length }}</td>
+                            <td>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun corso disponibile</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin users template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/utenti.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Gestione Utenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Utenti</h1>
+    <a href="{{ url_for('admin_nuovo_utente') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nuovo Utente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utente in utenti %}
+                    <tr>
+                        <td>{{ utente.id }}</td>
+                        <td>{{ utente.username }}</td>
+                        <td>{{ utente.nome }}</td>
+                        <td>{{ utente.cognome }}</td>
+                        <td>{{ utente.email }}</td>
+                        <td>
+                            {% if utente.role == 'admin' %}
+                                <span class="badge bg-danger">Amministratore</span>
+                            {% elif utente.role == 'docente' %}
+                                <span class="badge bg-primary">Docente</span>
+                            {% else %}
+                                <span class="badge bg-success">Discente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create new user form
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create login template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin dashboard template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/dashboard.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard Amministratore</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Discenti</h5>
+                <p class="card-text display-4">{{ discenti_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Corsi</h5>
+                <p class="card-text display-4">{{ corsi_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Test Completati</h5>
+                <p class="card-text display-4">{{ test_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Attestati</h5>
+                <p class="card-text display-4">{{ attestati_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Corsi Recenti</h5>
+        <a href="{{ url_for('admin_corsi') }}" class="btn btn-sm btn-primary">Vedi Tutti</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Iscritti</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if corsi %}
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.iscrizioni|length }}</td>
+                            <td>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun corso disponibile</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin users template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/utenti.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Gestione Utenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Utenti</h1>
+    <a href="{{ url_for('admin_nuovo_utente') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nuovo Utente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utente in utenti %}
+                    <tr>
+                        <td>{{ utente.id }}</td>
+                        <td>{{ utente.username }}</td>
+                        <td>{{ utente.nome }}</td>
+                        <td>{{ utente.cognome }}</td>
+                        <td>{{ utente.email }}</td>
+                        <td>
+                            {% if utente.role == 'admin' %}
+                                <span class="badge bg-danger">Amministratore</span>
+                            {% elif utente.role == 'docente' %}
+                                <span class="badge bg-primary">Docente</span>
+                            {% else %}
+                                <span class="badge bg-success">Discente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create new user form
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create login template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin dashboard template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/dashboard.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard Amministratore</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Discenti</h5>
+                <p class="card-text display-4">{{ discenti_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Corsi</h5>
+                <p class="card-text display-4">{{ corsi_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Test Completati</h5>
+                <p class="card-text display-4">{{ test_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Attestati</h5>
+                <p class="card-text display-4">{{ attestati_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Corsi Recenti</h5>
+        <a href="{{ url_for('admin_corsi') }}" class="btn btn-sm btn-primary">Vedi Tutti</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Iscritti</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if corsi %}
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.iscrizioni|length }}</td>
+                            <td>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun corso disponibile</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin users template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/utenti.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Gestione Utenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Utenti</h1>
+    <a href="{{ url_for('admin_nuovo_utente') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nuovo Utente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utente in utenti %}
+                    <tr>
+                        <td>{{ utente.id }}</td>
+                        <td>{{ utente.username }}</td>
+                        <td>{{ utente.nome }}</td>
+                        <td>{{ utente.cognome }}</td>
+                        <td>{{ utente.email }}</td>
+                        <td>
+                            {% if utente.role == 'admin' %}
+                                <span class="badge bg-danger">Amministratore</span>
+                            {% elif utente.role == 'docente' %}
+                                <span class="badge bg-primary">Docente</span>
+                            {% else %}
+                                <span class="badge bg-success">Discente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create new user form
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create login template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/nuovo_utente.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Nuovo Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="email" name="email"
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                        <label for="cognome" class="form-label">Cognome</label>
+                        <input type="text" class="form-control" id="cognome" name="cognome"
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                        <label for="role" class="form-label">Ruolo</label>
+                        <input type="text" class="form-control" id="role" name="role"
+                        <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}''')
+    
+    # Create admin dashboard template
+    with open(os.path.join(os.path.dirname(__file__), 'templates/admin/dashboard.html'), 'w') as f:
+        f.write('''{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard Amministratore</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Discenti</h5>
+                <p class="card-text display-4">{{ discenti_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Corsi</h5>
+                <p class="card-text display-4">{{ corsi_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Test Completati</h5>
+                <p class="card-text display-4">{{ test_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Attestati</h5>
+                <p class="card-text display-4">{{ attestati_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Corsi Recenti</h5>
+        <a href="{{ url_for('admin_corsi') }}" class="btn btn-sm btn-primary">Vedi Tutti</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Iscritti</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if corsi %}
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.iscrizioni|length }}</td>
+                            <td>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun corso disponibile</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}''')
+   
+   # Make sure this is at the very end of your file
+# Create a dictionary of models to pass to the routes
+models = {
+    'Progetto': Progetto,
+    'Corso': Corso,
+    'User': User,
+    'Iscrizione': Iscrizione,
+    'Test': Test,
+    'RisultatoTest': RisultatoTest,
+    'Attestato': Attestato
+}
+
+# Initialize the routes with the Flask app and other required objects
+progetti.init_routes(app, db, role_required, models)
+
+# Make sure this is at the very end of your file
 if __name__ == '__main__':
+    # Assicurati che la cartella uploads esista
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+    
+    # Inizializza il database solo se necessario (prima esecuzione o dopo modifiche ai modelli)
+    # Puoi commentare questa parte dopo la prima esecuzione
+    # with app.app_context():
+    #     db.create_all()  # Create all tables
+    
+    # Avvia l'app in modalità debug
     app.run(debug=True)
+
+

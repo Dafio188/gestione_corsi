@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Accesso Negato - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="text-center my-5">
+    <h1 class="display-1">403</h1>
+    <h2 class="mb-4">Accesso Negato</h2>
+    <p class="lead">Non hai i permessi per accedere a questa pagina.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">
+        <i class="bi bi-house"></i> Torna alla Home
+    </a>
+</div>
+{% endblock %}

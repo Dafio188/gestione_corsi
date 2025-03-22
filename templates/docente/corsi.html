@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}I Miei Corsi - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item active">I Miei Corsi</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>I Miei Corsi</h1>
+        <div>
+            <a href="{{ url_for('docente_dashboard') }}" class="btn btn-secondary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+            </a>
+            <a href="{{ url_for('docente_nuovo_corso') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nuovo Corso
+            </a>
+        </div>
+    </div>
+    
+    <!-- Contenuto della pagina -->
+    {% if corsi %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Titolo</th>
+                    <th>Data Inizio</th>
+                    <th>Data Fine</th>
+                    <th>Ore Totali</th>
+                    <th>Modalità</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for corso in corsi %}
+                <tr>
+                    <td>{{ corso.titolo }}</td>
+                    <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ corso.ore_totali }}</td>
+                    <td>
+                        {% if corso.modalita == 'in_house' %}
+                            In House
+                        {% elif corso.modalita == 'webinar' %}
+                            Webinar
+                        {% else %}
+                            {{ corso.modalita }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-info">Dettagli</a>
+                        <a href="{{ url_for('docente_modifica_corso', corso_id=corso.id) }}" class="btn btn-sm btn-primary">Modifica</a>
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ corso.id }}">
+                            Elimina
+                        </button>
+                    </td>
+                </tr>
+                <!-- Modal di conferma eliminazione -->
+                <div class="modal fade" id="deleteModal{{ corso.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ corso.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel{{ corso.id }}">Conferma eliminazione</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                Sei sicuro di voler eliminare il corso "{{ corso.titolo }}"?
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                <form action="{{ url_for('docente_elimina_corso', corso_id=corso.id) }}" method="post">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger">Elimina</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Non hai ancora creato nessun corso.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

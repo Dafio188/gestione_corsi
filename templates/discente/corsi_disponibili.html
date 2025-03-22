@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Corsi Disponibili - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Corsi Disponibili</h1>
+    <a href="{{ url_for('discente_dashboard') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if corsi %}
+            <div class="row">
+                {% for corso in corsi %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">{{ corso.titolo }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ corso.descrizione }}</p>
+                            <div class="mb-2">
+                                <strong>Docente:</strong> {{ corso.docente.nome }} {{ corso.docente.cognome }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Periodo:</strong> {{ corso.data_inizio.strftime('%d/%m/%Y') }} - {{ corso.data_fine.strftime('%d/%m/%Y') }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Ore totali:</strong> {{ corso.ore_totali }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Stato:</strong>
+                                {% if corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <form action="{{ url_for('discente_iscrizione_corso', corso_id=corso.id) }}" method="POST">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-person-plus"></i> Iscriviti
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                Non ci sono corsi disponibili per l'iscrizione al momento.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

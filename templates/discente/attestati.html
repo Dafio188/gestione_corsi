@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}I Miei Attestati - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>I Miei Attestati</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Corso</th>
+                        <th>Data Generazione</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if attestati %}
+                        {% for attestato in attestati %}
+                        <tr>
+                            <td>{{ attestato.iscrizione.corso.titolo }}</td>
+                            <td>{{ attestato.data_generazione.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i> Scarica
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center">Non hai ancora ricevuto attestati</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

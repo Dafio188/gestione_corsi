@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Nuovo Attestato - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Attestato</h1>
+    <a href="{{ url_for('admin_attestati') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+            {{ csrf_token() }}
+            <div class="mb-3">
+                <label for="iscrizione_id" class="form-label">Iscrizione</label>
+                <select class="form-select" id="iscrizione_id" name="iscrizione_id" required>
+                    <option value="">Seleziona un'iscrizione</option>
+                    {% for iscrizione in iscrizioni %}
+                        <option value="{{ iscrizione.id }}">
+                            {{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }} - {{ iscrizione.corso.titolo }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">
+                    Seleziona un'iscrizione
+                </div>
+            </div>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> L'attestato verrà generato automaticamente con i dati del discente e del corso.
+            </div>
+            <button type="submit" class="btn btn-primary">Genera Attestato</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

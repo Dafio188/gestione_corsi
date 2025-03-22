@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Iscrizione - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Modifica Iscrizione</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_modifica_iscrizione', corso_id=corso.id, iscrizione_id=iscrizione.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="discente" class="form-label">Discente</label>
+                    <input type="text" class="form-control" id="discente" value="{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}" disabled>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="corso" class="form-label">Corso</label>
+                    <input type="text" class="form-control" id="corso" value="{{ corso.titolo }}" disabled>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="ore_frequentate" class="form-label">Ore Frequentate</label>
+                    <input type="number" step="0.1" class="form-control" id="ore_frequentate" name="ore_frequentate" value="{{ iscrizione.ore_frequentate }}" required>
+                    <div class="form-text">Ore totali del corso: {{ corso.ore_totali }}</div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Aggiorna Iscrizione</button>
+                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

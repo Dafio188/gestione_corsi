@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Docenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Docenti</h1>
+    <a href="{{ url_for('admin_nuovo_docente') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nuovo Docente
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Corsi</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if docenti %}
+                        {% for docente in docenti %}
+                        <tr>
+                            <td>{{ docente.id }}</td>
+                            <td>{{ docente.nome }}</td>
+                            <td>{{ docente.cognome }}</td>
+                            <td>{{ docente.username }}</td>
+                            <td>{{ docente.email }}</td>
+                            <td>{{ docente.corsi|length }}</td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-danger btn-delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nessun docente trovato</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

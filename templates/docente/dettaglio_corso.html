@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Dettaglio Corso{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ corso.titolo }}</h1>
+        <div>
+            <!-- Add a prominent button for webinar courses -->
+            {% if corso.modalita == 'webinar' and corso.link_webinar %}
+            <a href="{{ corso.link_webinar }}" target="_blank" class="btn btn-success me-2">
+                <i class="fas fa-video"></i> Partecipa al Webinar
+            </a>
+            {% endif %}
+            <a href="{{ url_for('docente_modifica_corso', corso_id=corso.id) }}" class="btn btn-primary">Modifica</a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                Elimina
+            </button>
+        </div>
+    </div>
+    
+    <!-- Add an alert for webinar courses with link -->
+    {% if corso.modalita == 'webinar' and corso.link_webinar %}
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle"></i> Questo corso è erogato in modalità webinar. 
+        <a href="{{ corso.link_webinar }}" target="_blank" class="alert-link">Clicca qui per partecipare</a>.
+    </div>
+    {% endif %}
+    
+    <!-- Rest of the template remains the same -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Informazioni Corso</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Descrizione:</strong> {{ corso.descrizione }}</p>
+                    <p><strong>Ore Totali:</strong> {{ corso.ore_totali }}</p>
+                    <p><strong>Data Inizio:</strong> {{ corso.data_inizio.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Data Fine:</strong> {{ corso.data_fine.strftime('%d/%m/%Y') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Progetto:</strong> 
+                        {% if corso.progetto %}
+                            {{ corso.progetto.titolo }}
+                        {% else %}
+                            Nessun progetto associato
+                        {% endif %}
+                    </p>
+                    <p><strong>Riferimento Progetto:</strong> {{ corso.progetto_riferimento or 'Non specificato' }}</p>
+                    <p><strong>Modalità:</strong> 
+                        {% if corso.modalita == 'in_house' %}
+                            In House
+                        {% elif corso.modalita == 'webinar' %}
+                            Webinar
+                        {% else %}
+                            {{ corso.modalita }}
+                        {% endif %}
+                    </p>
+                    
+                    {% if corso.modalita == 'in_house' %}
+                    <p><strong>Indirizzo:</strong> {{ corso.indirizzo or 'Non specificato' }}</p>
+                    <p><strong>Orario:</strong> {{ corso.orario or 'Non specificato' }}</p>
+                    {% elif corso.modalita == 'webinar' %}
+                    <p><strong>Link Webinar:</strong> 
+                        {% if corso.link_webinar %}
+                            <a href="{{ corso.link_webinar }}" target="_blank">{{ corso.link_webinar }}</a>
+                        {% else %}
+                            Non specificato
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Iscrizioni</h5>
+            <a href="{{ url_for('admin_nuova_iscrizione') }}" class="btn btn-sm btn-primary">Aggiungi Iscrizione</a>
+        </div>
+        <div class="card-body">
+            {% if iscrizioni %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Discente</th>
+                            <th>Email</th>
+                            <th>Ore Frequentate</th>
+                            <th>Percentuale</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for iscrizione in iscrizioni %}
+                        <tr>
+                            <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                            <td>{{ iscrizione.discente.email }}</td>
+                            <td>{{ iscrizione.ore_frequentate }}</td>
+                            <td>
+                                {% if corso.ore_totali > 0 %}
+                                    {{ (iscrizione.ore_frequentate / corso.ore_totali * 100) | round(1) }}%
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('docente_modifica_iscrizione', corso_id=corso.id, iscrizione_id=iscrizione.id) }}" class="btn btn-sm btn-primary">Modifica Ore</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Nessuna iscrizione per questo corso.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Test</h5>
+            <a href="{{ url_for('docente_nuovo_test', corso_id=corso.id) }}" class="btn btn-sm btn-primary">Aggiungi Test</a>
+        </div>
+        <div class="card-body">
+            {% if test %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Titolo</th>
+                            <th>Tipo</th>
+                            <th>File</th>
+                            <th>Link Forms</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in test %}
+                        <tr>
+                            <td>{{ t.titolo }}</td>
+                            <td>{{ t.tipo }}</td>
+                            <td>
+                                {% if t.file_path %}
+                                <a href="{{ url_for('download_file', filename=t.file_path) }}" class="btn btn-sm btn-secondary">Scarica</a>
+                                {% else %}
+                                Nessun file
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.forms_link %}
+                                <a href="{{ t.forms_link }}" target="_blank" class="btn btn-sm btn-secondary">Apri</a>
+                                {% else %}
+                                Nessun link
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('docente_dettaglio_test', corso_id=corso.id, test_id=t.id) }}" class="btn btn-sm btn-info">Dettagli</a>
+                                <a href="{{ url_for('docente_modifica_test', corso_id=corso.id, test_id=t.id) }}" class="btn btn-sm btn-primary">Modifica</a>
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTestModal{{ t.id }}">
+                                    Elimina
+                                </button>
+                                
+                                <!-- Modal for test deletion -->
+                                <div class="modal fade" id="deleteTestModal{{ t.id }}" tabindex="-1" aria-labelledby="deleteTestModalLabel{{ t.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteTestModalLabel{{ t.id }}">Conferma Eliminazione</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Sei sicuro di voler eliminare il test "{{ t.titolo }}"? Questa azione non può essere annullata.
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <form action="{{ url_for('docente_elimina_test', corso_id=corso.id, test_id=t.id) }}" method="POST">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-danger">Elimina</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Nessun test per questo corso.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Modal for course deletion -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Conferma Eliminazione</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Sei sicuro di voler eliminare il corso "{{ corso.titolo }}"? Questa azione non può essere annullata.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <form action="{{ url_for('docente_elimina_corso', corso_id=corso.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Elimina</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

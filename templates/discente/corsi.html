@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}I Miei Corsi - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>I Miei Corsi</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Titolo</th>
+                        <th>Docente</th>
+                        <th>Data Inizio</th>
+                        <th>Data Fine</th>
+                        <th>Modalità</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for iscrizione in iscrizioni %}
+                    <tr>
+                        <!-- For corso title -->
+                        <td>
+                            {% if iscrizione.corso %}
+                                {{ iscrizione.corso.titolo }}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </td>
+                        
+                        <!-- For data_fine -->
+                        <td>
+                            {% if iscrizione.corso %}
+                                {{ iscrizione.corso.data_fine.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </td>
+                        
+                        <!-- For docente -->
+                        <td>
+                            {% if iscrizione.corso and iscrizione.corso.docente %}
+                                {{ iscrizione.corso.docente.nome }} {{ iscrizione.corso.docente.cognome }}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </td>
+                        
+                        <!-- For status badges -->
+                        <td>
+                            {% if iscrizione.corso %}
+                                {% if iscrizione.corso.data_inizio > now %}
+                                    <span class="badge bg-warning">In Programma</span>
+                                {% elif iscrizione.corso.data_fine < now %}
+                                    <span class="badge bg-success">Completato</span>
+                                {% else %}
+                                    <span class="badge bg-primary">In Corso</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">N/D</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if iscrizione.corso %}
+                                {% if iscrizione.corso.modalita == 'in_house' %}
+                                    In House
+                                    {% if iscrizione.corso.indirizzo %}
+                                        <br><small>{{ iscrizione.corso.indirizzo }}</small>
+                                    {% endif %}
+                                {% elif iscrizione.corso.modalita == 'webinar' %}
+                                    Webinar
+                                    {% if iscrizione.corso.link %}
+                                        <br><small><a href="{{ iscrizione.corso.link }}" target="_blank">Link</a></small>
+                                    {% endif %}
+                                {% else %}
+                                    {{ iscrizione.corso.modalita }}
+                                {% endif %}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- Replace the problematic line with this -->
+                            {% if iscrizione.corso %}
+                                <a href="{{ url_for('discente_dettaglio_corso', corso_id=iscrizione.corso.id) }}" class="btn btn-sm btn-info">Dettagli</a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Dettagli</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

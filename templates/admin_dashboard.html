@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block page_title %}Dashboard Amministratore{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white p-3 rounded me-3">
+                        <i class="bi bi-people fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title mb-0">Discenti Totali</h6>
+                        <h2 class="mt-2 mb-0">{{ discenti_count|default(0) }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success text-white p-3 rounded me-3">
+                        <i class="bi bi-book fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title mb-0">Corsi Attivi</h6>
+                        <h2 class="mt-2 mb-0">{{ corsi_count|default(0) }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info text-white p-3 rounded me-3">
+                        <i class="bi bi-clipboard-check fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title mb-0">Test Completati</h6>
+                        <h2 class="mt-2 mb-0">{{ test_count|default(0) }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm h-100

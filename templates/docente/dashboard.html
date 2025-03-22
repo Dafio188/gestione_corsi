@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Docente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Dashboard Docente</h1>
+    
+    <div class="jumbotron bg-light p-4 mb-4 rounded">
+        <h2>Benvenuto, {{ current_user.nome }} {{ current_user.cognome }}</h2>
+        <p>Questa è la dashboard per i docenti.</p>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">I miei Corsi</h5>
+                    <p class="card-text display-4">{{ corsi_count }}</p>
+                    <a href="{{ url_for('docente_corsi') }}" class="btn btn-light">Visualizza</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Note e Appunti</h5>
+                    <p class="card-text"><i class="bi bi-journal-text display-4"></i></p>
+                    <a href="{{ url_for('docente_note') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if corsi %}
+    <h2 class="mt-4">I miei corsi</h2>
+    <div class="row">
+        {% for corso in corsi %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ corso.titolo }}</h5>
+                    <p class="card-text">{{ corso.descrizione|truncate(100) }}</p>
+                    <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary">Dettagli</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info mt-4">
+        Non hai ancora corsi assegnati.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Corso - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Modifica Corso</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_modifica_corso', corso_id=corso.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="titolo" class="form-label">Titolo</label>
+                    <input type="text" class="form-control" id="titolo" name="titolo" value="{{ corso.titolo }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="descrizione" class="form-label">Descrizione</label>
+                    <textarea class="form-control" id="descrizione" name="descrizione" rows="3">{{ corso.descrizione }}</textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="ore_totali" class="form-label">Ore Totali</label>
+                    <input type="number" step="0.5" class="form-control" id="ore_totali" name="ore_totali" value="{{ corso.ore_totali }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="data_inizio" class="form-label">Data Inizio</label>
+                    <input type="date" class="form-control" id="data_inizio" name="data_inizio" value="{{ corso.data_inizio.strftime('%Y-%m-%d') }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="data_fine" class="form-label">Data Fine</label>
+                    <input type="date" class="form-control" id="data_fine" name="data_fine" value="{{ corso.data_fine.strftime('%Y-%m-%d') }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="progetto_id" class="form-label">Progetto</label>
+                    <select class="form-select" id="progetto_id" name="progetto_id">
+                        <option value="">Seleziona un progetto</option>
+                        {% for progetto in progetti %}
+                        <option value="{{ progetto.id }}" {% if corso.progetto_id|string == progetto.id|string %}selected{% endif %}>{{ progetto.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="progetto_riferimento" class="form-label">Riferimento Progetto</label>
+                    <input type="text" class="form-control" id="progetto_riferimento" name="progetto_riferimento" value="{{ corso.progetto_riferimento }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="docente_id" class="form-label">Docente</label>
+                    <select class="form-select" id="docente_id" name="docente_id" required>
+                        {% for docente in docenti %}
+                        <option value="{{ docente.id }}" {% if corso.docente_id == docente.id %}selected{% endif %}>{{ docente.nome }} {{ docente.cognome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="modalita" class="form-label">Modalità di Erogazione</label>
+                    <select class="form-control" id="modalita" name="modalita" required onchange="toggleModalitaFields()">
+                        <option value="in_house" {% if corso.modalita == 'in_house' %}selected{% endif %}>In House</option>
+                        <option value="webinar" {% if corso.modalita == 'webinar' %}selected{% endif %}>Webinar</option>
+                        <option value="e_learning" {% if corso.modalita == 'e_learning' %}selected{% endif %}>E-Learning</option>
+                    </select>
+                </div>
+                
+                <div id="indirizzo_container" class="mb-3">
+                    <label for="indirizzo" class="form-label">Indirizzo</label>
+                    <input type="text" class="form-control" id="indirizzo" name="indirizzo" value="{{ corso.indirizzo or '' }}" placeholder="Inserisci l'indirizzo del corso">
+                </div>
+                
+                <div id="link_webinar_container" class="mb-3" style="display: none;">
+                    <label for="link_webinar" class="form-label">Link Webinar</label>
+                    <input type="text" class="form-control" id="link_webinar" name="link_webinar" value="{{ corso.link_webinar or '' }}" placeholder="Inserisci il link del webinar">
+                </div>
+                
+                <div id="piattaforma_container" class="mb-3" style="display: none;">
+                    <label for="piattaforma" class="form-label">Piattaforma E-Learning</label>
+                    <input type="text" class="form-control" id="piattaforma" name="piattaforma" value="{{ corso.piattaforma or '' }}" placeholder="Inserisci la piattaforma e-learning">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="orario" class="form-label">Orario</label>
+                    <input type="text" class="form-control" id="orario" name="orario" value="{{ corso.orario or '' }}" placeholder="Inserisci l'orario del corso">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Aggiorna Corso</button>
+                <a href="{{ url_for('admin_corsi') }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleModalitaFields() {
+    const modalita = document.getElementById('modalita').value;
+    const indirizzoContainer = document.getElementById('indirizzo_container');
+    const linkWebinarContainer = document.getElementById('link_webinar_container');
+    const piattaformaContainer = document.getElementById('piattaforma_container');
+    
+    // Hide all containers first
+    indirizzoContainer.style.display = 'none';
+    linkWebinarContainer.style.display = 'none';
+    piattaformaContainer.style.display = 'none';
+    
+    // Show container based on selected modality
+    if (modalita === 'in_house') {
+        indirizzoContainer.style.display = 'block';
+    } else if (modalita === 'webinar') {
+        linkWebinarContainer.style.display = 'block';
+    } else if (modalita === 'e_learning') {
+        piattaformaContainer.style.display = 'block';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleModalitaFields();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Nuovo Progetto - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Nuovo Progetto</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_crea_progetto') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="titolo" class="form-label">Titolo</label>
+                    <input type="text" class="form-control" id="titolo" name="titolo" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="descrizione" class="form-label">Descrizione</label>
+                    <textarea class="form-control" id="descrizione" name="descrizione" rows="3"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="data_inizio" class="form-label">Data Inizio</label>
+                    <input type="date" class="form-control" id="data_inizio" name="data_inizio" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="data_fine" class="form-label">Data Fine</label>
+                    <input type="date" class="form-control" id="data_fine" name="data_fine" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="budget" class="form-label">Budget</label>
+                    <div class="input-group">
+                        <span class="input-group-text">€</span>
+                        <input type="number" step="0.01" class="form-control" id="budget" name="budget" value="0">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Crea Progetto</button>
+                <a href="{{ url_for('admin_gestione_progetti') }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

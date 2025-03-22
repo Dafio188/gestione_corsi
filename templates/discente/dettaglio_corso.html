@@ -1,0 +1,104 @@
+io corsoagl{% extends 'base.html' %}
+
+{% block title %}Dettaglio Corso{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ corso.titolo }}</h1>
+    
+    {% if corso.modalita == 'webinar' and corso.link_webinar %}
+    <div class="alert alert-success mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="alert-heading"><i class="fas fa-video"></i> Corso Webinar</h4>
+                <p class="mb-0">Questo corso è erogato in modalità webinar. Clicca sul pulsante per partecipare.</p>
+            </div>
+            <a href="{{ corso.link_webinar }}" target="_blank" class="btn btn-lg btn-success">
+                Partecipa al Webinar
+            </a>
+        </div>
+    </div>
+    {% elif corso.modalita == 'in_house' %}
+    <div class="alert alert-info mb-4">
+        <h4 class="alert-heading"><i class="fas fa-map-marker-alt"></i> Corso In House</h4>
+        <p class="mb-0"><strong>Indirizzo:</strong> {{ corso.indirizzo or 'Non specificato' }}</p>
+        <p class="mb-0"><strong>Orario:</strong> {{ corso.orario or 'Non specificato' }}</p>
+    </div>
+    {% endif %}
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Informazioni Corso</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Descrizione:</strong> {{ corso.descrizione }}</p>
+                    <p><strong>Ore Totali:</strong> {{ corso.ore_totali }}</p>
+                    <p><strong>Data Inizio:</strong> {{ corso.data_inizio.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Data Fine:</strong> {{ corso.data_fine.strftime('%d/%m/%Y') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Docente:</strong> {{ corso.docente.nome }} {{ corso.docente.cognome }}</p>
+                    <p><strong>Progetto:</strong> 
+                        {% if corso.progetto %}
+                            {{ corso.progetto.titolo }}
+                        {% else %}
+                            Nessun progetto associato
+                        {% endif %}
+                    </p>
+                    <p><strong>Modalità:</strong> 
+                        {% if corso.modalita == 'in_house' %}
+                            In House
+                        {% elif corso.modalita == 'webinar' %}
+                            Webinar
+                        {% else %}
+                            {{ corso.modalita }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Test del Corso</h5>
+        </div>
+        <div class="card-body">
+            {% if test %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Titolo</th>
+                            <th>Tipo</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in test %}
+                        <tr>
+                            <td>{{ t.titolo }}</td>
+                            <td>{{ t.tipo }}</td>
+                            <td>
+                                {% if t.file_path %}
+                                <a href="{{ url_for('download_file', filename=t.file_path) }}" class="btn btn-sm btn-secondary">Scarica</a>
+                                {% endif %}
+                                
+                                {% if t.forms_link %}
+                                <a href="{{ t.forms_link }}" target="_blank" class="btn btn-sm btn-primary">Compila</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Nessun test disponibile per questo corso.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

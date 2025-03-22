@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Report Corso - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Report Corso: {{ corso.titolo }}</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Dettagli Corso</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Data Inizio:</strong> {{ corso.data_inizio.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Data Fine:</strong> {{ corso.data_fine.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Ore Totali:</strong> {{ corso.ore_totali }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Docente:</strong> 
+                        {% if corso.docente %}
+                            {{ corso.docente.nome }} {{ corso.docente.cognome }}
+                        {% else %}
+                            Non assegnato
+                        {% endif %}
+                    </p>
+                    <p><strong>Progetto:</strong> 
+                        {% if corso.progetto %}
+                            {{ corso.progetto.titolo }}
+                        {% else %}
+                            Non assegnato
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_excel') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="corso">
+                        <input type="hidden" name="id_elemento" value="{{ corso.id }}">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-file-excel"></i> Esporta in Excel
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="corso">
+                        <input type="hidden" name="id_elemento" value="{{ corso.id }}">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-file-pdf"></i> Esporta in PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Iscrizioni</h5>
+        </div>
+        <div class="card-body">
+            {% if iscrizioni %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Discente</th>
+                                <th>Email</th>
+                                <th>Ore Frequentate</th>
+                                <th>Completato</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for iscrizione in iscrizioni %}
+                                <tr>
+                                    <td>{{ iscrizione.id }}</td>
+                                    <td>
+                                        {% if iscrizione.discente %}
+                                            {{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}
+                                        {% else %}
+                                            Discente non trovato
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if iscrizione.discente %}
+                                            {{ iscrizione.discente.email }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ iscrizione.ore_frequentate }}/{{ corso.ore_totali }}</td>
+                                    <td>
+                                        {% if iscrizione.ore_frequentate >= corso.ore_totali %}
+                                            <span class="badge bg-success">Sì</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-center">Nessuna iscrizione per questo corso.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('admin_report') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Torna ai Report
+        </a>
+    </div>
+</div>
+{% endblock %}

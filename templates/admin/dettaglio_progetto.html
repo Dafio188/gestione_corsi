@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Dettaglio Progetto - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Dettaglio Progetto</h1>
+        <div>
+            <a href="{{ url_for('admin_modifica_progetto', progetto_id=progetto.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Modifica
+            </a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> Elimina
+            </button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Informazioni Progetto</h5>
+                </div>
+                <div class="card-body">
+                    <h2>{{ progetto.titolo }}</h2>
+                    <p class="text-muted">ID: {{ progetto.id }}</p>
+                    
+                    <hr>
+                    
+                    <p><strong>Descrizione:</strong><br>{{ progetto.descrizione or 'Nessuna descrizione disponibile' }}</p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <p><strong>Data Inizio:</strong><br>{{ progetto.data_inizio.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Data Fine:</strong><br>{{ progetto.data_fine.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                    </div>
+                    
+                    <p><strong>Budget:</strong><br>€ {{ "%.2f"|format(progetto.budget or 0) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Statistiche</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ corsi|length }}</h3>
+                                    <p class="card-text">Corsi</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ discenti|length }}</h3>
+                                    <p class="card-text">Discenti</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Corsi associati -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Corsi Associati</h5>
+        </div>
+        <div class="card-body">
+            {% if corsi %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titolo</th>
+                            <th>Data Inizio</th>
+                            <th>Data Fine</th>
+                            <th>Docente</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.id }}</td>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> Dettagli
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Nessun corso associato a questo progetto.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Discenti associati -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Discenti Associati</h5>
+        </div>
+        <div class="card-body">
+            {% if discenti %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Cognome</th>
+                            <th>Email</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for discente in discenti %}
+                        <tr>
+                            <td>{{ discente.id }}</td>
+                            <td>{{ discente.nome }}</td>
+                            <td>{{ discente.cognome }}</td>
+                            <td>{{ discente.email }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_modifica_utente', utente_id=discente.id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> Dettagli
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">Nessun discente associato a questo progetto.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Conferma eliminazione</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Sei sicuro di voler eliminare il progetto "{{ progetto.titolo }}"? Questa azione potrebbe influenzare corsi e discenti associati.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <form action="{{ url_for('admin_elimina_progetto', progetto_id=progetto.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger delete-btn">Elimina</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fix for modal flickering and focus issues
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure modal is properly initialized
+        var deleteModal = document.getElementById('deleteModal');
+        if (deleteModal) {
+            deleteModal.addEventListener('shown.bs.modal', function() {
+                // Focus the delete button when modal is shown
+                var deleteButton = this.querySelector('.delete-btn');
+                if (deleteButton) {
+                    deleteButton.focus();
+                }
+            });
+            
+            // Prevent modal from closing when clicking inside
+            deleteModal.addEventListener('click', function(event) {
+                if (event.target === this.querySelector('.modal-content') || 
+                    this.querySelector('.modal-content').contains(event.target)) {
+                    event.stopPropagation();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

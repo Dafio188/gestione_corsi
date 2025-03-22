@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Progetti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestione Progetti</h1>
+        <a href="{{ url_for('admin_crea_progetto') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nuovo Progetto
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titolo</th>
+                            <th>Data Inizio</th>
+                            <th>Data Fine</th>
+                            <th>Budget</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for progetto in progetti %}
+                        <tr>
+                            <td>{{ progetto.id }}</td>
+                            <td>{{ progetto.titolo }}</td>
+                            <td>{{ progetto.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ progetto.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{% if progetto.budget %}€ {{ "%.2f"|format(progetto.budget) }}{% else %}N/D{% endif %}</td>
+                            <td>
+                                <a href="{{ url_for('admin_modifica_progetto', progetto_id=progetto.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ progetto.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteModal{{ progetto.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ progetto.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ progetto.id }}">Conferma eliminazione</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Sei sicuro di voler eliminare il progetto "{{ progetto.titolo }}"?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <form action="{{ url_for('admin_elimina_progetto', progetto_id=progetto.id) }}" method="POST" class="d-inline">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-danger">Elimina</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fix for modal flickering and focus issues
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure modals are properly initialized
+        var deleteModals = document.querySelectorAll('.modal');
+        deleteModals.forEach(function(modal) {
+            modal.addEventListener('shown.bs.modal', function() {
+                // Focus the delete button when modal is shown
+                var deleteButton = this.querySelector('.delete-btn');
+                if (deleteButton) {
+                    deleteButton.focus();
+                }
+            });
+            
+            // Prevent modal from closing when clicking inside
+            modal.addEventListener('click', function(event) {
+                if (event.target === this.querySelector('.modal-content') || 
+                    this.querySelector('.modal-content').contains(event.target)) {
+                    event.stopPropagation();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

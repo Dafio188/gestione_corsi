@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Iscrizione - {{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_corsi') }}">I Miei Corsi</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}">{{ corso.titolo }}</a></li>
+            <li class="breadcrumb-item active">Modifica Iscrizione</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Modifica Ore Frequentate</h1>
+        <div>
+            <a href="{{ url_for('docente_dashboard') }}" class="btn btn-secondary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+            </a>
+            <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Torna al Corso
+            </a>
+        </div>
+    </div>
+    
+    <!-- Resto del contenuto della pagina -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2>Modifica Ore Frequentate</h2>
+        </div>
+        <div class="card-body">
+            <h4>Discente: {{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</h4>
+            <h5>Corso: {{ corso.titolo }}</h5>
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="ore_frequentate" class="form-label">Ore Frequentate:</label>
+                    <input type="number" step="0.5" min="0" max="{{ corso.ore_totali }}" class="form-control" id="ore_frequentate" name="ore_frequentate" value="{{ iscrizione.ore_frequentate }}" required>
+                    <div class="form-text">Ore totali del corso: {{ corso.ore_totali }}</div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-secondary">Annulla</a>
+                    <button type="submit" class="btn btn-primary">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

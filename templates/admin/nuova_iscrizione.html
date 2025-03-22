@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Nuova Iscrizione - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Nuova Iscrizione</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_nuova_iscrizione') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="discente_id" class="form-label">Discente</label>
+                    <select class="form-select" id="discente_id" name="discente_id" required>
+                        {% for discente in discenti %}
+                        <option value="{{ discente.id }}">{{ discente.nome }} {{ discente.cognome }} ({{ discente.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="corso_id" class="form-label">Corso</label>
+                    <select class="form-select" id="corso_id" name="corso_id" required>
+                        {% for corso in corsi %}
+                        <option value="{{ corso.id }}">{{ corso.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Crea Iscrizione</button>
+                <a href="{{ url_for('admin_corsi') }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

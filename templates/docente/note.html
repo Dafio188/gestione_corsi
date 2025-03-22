@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Note e Appunti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Note e Appunti</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Note e Appunti</h1>
+        <div>
+            <a href="{{ url_for('docente_dashboard') }}" class="btn btn-secondary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+            </a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newNoteModal">
+                <i class="bi bi-plus-circle"></i> Nuova Nota
+            </button>
+        </div>
+    </div>
+    
+    <!-- Contenuto della pagina -->
+    {% if note %}
+    <div class="row">
+        {% for nota in note %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{{ nota.titolo }}</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ nota.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ nota.id }}">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('docente_modifica_nota', nota_id=nota.id) }}">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </a>
+                            </li>
+                            <li>
+                                <button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteNoteModal{{ nota.id }}">
+                                    <i class="bi bi-trash"></i> Elimina
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if nota.corso %}
+                    <p class="card-subtitle mb-2 text-muted">Corso: {{ nota.corso.titolo }}</p>
+                    {% endif %}
+                    <p class="card-text">{{ nota.contenuto|truncate(200) }}</p>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>Ultima modifica: {{ nota.data_modifica.strftime('%d/%m/%Y %H:%M') }}</small>
+                </div>
+            </div>
+            
+            <!-- Modal di conferma eliminazione -->
+            <div class="modal fade" id="deleteNoteModal{{ nota.id }}" tabindex="-1" aria-labelledby="deleteNoteModalLabel{{ nota.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteNoteModalLabel{{ nota.id }}">Conferma eliminazione</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Sei sicuro di voler eliminare la nota "{{ nota.titolo }}"?
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                            <form action="{{ url_for('docente_elimina_nota', nota_id=nota.id) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger">Elimina</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Non hai ancora creato nessuna nota.
+    </div>
+    {% endif %}
+    
+    <!-- Modal per nuova nota -->
+    <div class="modal fade" id="newNoteModal" tabindex="-1" aria-labelledby="newNoteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newNoteModalLabel">Nuova Nota</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('docente_note') }}" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="titolo" class="form-label">Titolo</label>
+                            <input type="text" class="form-control" id="titolo" name="titolo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="corso_id" class="form-label">Corso (opzionale)</label>
+                            <select class="form-select" id="corso_id" name="corso_id">
+                                <option value="">-- Nessun corso --</option>
+                                {% for corso in corsi %}
+                                <option value="{{ corso.id }}">{{ corso.titolo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contenuto" class="form-label">Contenuto</label>
+                            <textarea class="form-control" id="contenuto" name="contenuto" rows="6" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

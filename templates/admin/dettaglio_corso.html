@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Dettaglio Corso - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ corso.titolo }}</h1>
+    <a href="{{ url_for('admin_corsi') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna ai Corsi
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Informazioni Corso</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Descrizione:</strong> {{ corso.descrizione }}</p>
+                <p><strong>Ore totali:</strong> {{ corso.ore_totali }}</p>
+                <p><strong>Data inizio:</strong> {{ corso.data_inizio.strftime('%d/%m/%Y') }}</p>
+                <p><strong>Data fine:</strong> {{ corso.data_fine.strftime('%d/%m/%Y') }}</p>
+                <p><strong>Docente:</strong> {{ corso.docente.nome }} {{ corso.docente.cognome }}</p>
+                {% if corso.progetto %}
+                <p><strong>Progetto:</strong> {{ corso.progetto.titolo }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Iscrizioni</h3>
+                <a href="{{ url_for('admin_nuova_iscrizione', corso_id=corso.id) }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Nuova Iscrizione
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Discente</th>
+                                <th>Email</th>
+                                <th>Ore frequentate</th>
+                                <th>Completamento</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for iscrizione in iscrizioni %}
+                            <tr>
+                                <td>{{ iscrizione.id }}</td>
+                                <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                                <td>{{ iscrizione.discente.email }}</td>
+                                <td>{{ iscrizione.ore_frequentate }} / {{ corso.ore_totali }}</td>
+                                <td>
+                                    {% set percentuale = (iscrizione.ore_frequentate / corso.ore_totali * 100)|int %}
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ percentuale }}%;" 
+                                             aria-valuenow="{{ percentuale }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ percentuale }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- Edit button -->
+                                    <a href="{{ url_for('admin_modifica_iscrizione', corso_id=corso.id, iscrizione_id=iscrizione.id) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    
+                                    <!-- Delete button with CSRF token -->
+                                    <form method="POST" action="{{ url_for('admin_elimina_iscrizione', corso_id=corso.id, iscrizione_id=iscrizione.id) }}" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Sei sicuro di voler eliminare questa iscrizione?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not iscrizioni %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nessun discente iscritto a questo corso</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Test</h3>
+                <a href="{{ url_for('admin_nuovo_test', corso_id=corso.id) }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Nuovo Test
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for t in test %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ t.titolo }}</h5>
+                            <small>{{ t.tipo }}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small>Risultati: {{ t.risultati|length }}</small>
+                            <div>
+                                <a href="{{ url_for('admin_modifica_test', corso_id=corso.id, test_id=t.id) }}" class="btn btn-sm btn-info text-white">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('admin_elimina_test', corso_id=corso.id, test_id=t.id) }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger text-white" onclick="return confirm('Sei sicuro di voler eliminare questo test?');">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not test %}
+                    <div class="list-group-item">
+                        <p class="text-center mb-0">Nessun test disponibile</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Add this in the course details section -->
+<div class="mb-3">
+    <strong>Modalità di erogazione:</strong>
+    {% if corso.modalita == 'in_house' %}
+        <span class="badge bg-primary">In House</span>
+    {% elif corso.modalita == 'webinar' %}
+        <span class="badge bg-info">Webinar</span>
+    {% elif corso.modalita == 'e_learning' %}
+        <span class="badge bg-success">E-Learning</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ corso.modalita }}</span>
+    {% endif %}
+</div>
+{% endblock %}

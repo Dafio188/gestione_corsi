@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Test - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Gestione Test</h1>
+    
+    <div class="d-flex justify-content-between mb-4">
+        <div>
+            <a href="{{ url_for('admin_nuovo_test') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nuovo Test
+            </a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Corso</th>
+                            <th>Tipo</th>
+                            <th>Titolo</th>
+                            <th>File</th>
+                            <th>Link Forms</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in test %}
+                        <tr>
+                            <td>{{ t.id }}</td>
+                            <td>{{ t.corso.titolo }}</td>
+                            <td>
+                                {% if t.tipo == 'ingresso' %}
+                                    Test d'ingresso
+                                {% elif t.tipo == 'intermedio' %}
+                                    Test intermedio
+                                {% elif t.tipo == 'finale' %}
+                                    Test finale
+                                {% else %}
+                                    {{ t.tipo }}
+                                {% endif %}
+                            </td>
+                            <td>{{ t.titolo }}</td>
+                            <td>
+                                {% if t.file_path %}
+                                <a href="#" class="text-decoration-none">
+                                    <i class="bi bi-file-earmark-text"></i> File
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Nessun file</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.forms_link %}
+                                <a href="{{ t.forms_link }}" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-link-45deg"></i> Link
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Nessun link</span>
+                                {% endif %}
+                            </td>
+                            <!-- In the actions column of the table -->
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('admin_test_risultati', test_id=t.id) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-clipboard-check"></i> Risultati
+                                    </a>
+                                    <a href="{{ url_for('admin_modifica_test', test_id=t.id) }}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil"></i> Modifica
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ t.id }}">
+                                        <i class="bi bi-trash"></i> Elimina
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Modals -->
+    {% for t in test %}
+    <div class="modal fade" id="deleteModal{{ t.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ t.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel{{ t.id }}">Conferma eliminazione</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Sei sicuro di voler eliminare il test "{{ t.titolo }}"? Questa azione eliminerà anche tutti i risultati associati.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <form action="{{ url_for('admin_elimina_test', test_id=t.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Elimina</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

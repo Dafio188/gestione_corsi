@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Nota - {{ nota.titolo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_note') }}">Note e Appunti</a></li>
+            <li class="breadcrumb-item active">Modifica Nota</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Modifica Nota</h1>
+        <div>
+            <a href="{{ url_for('docente_note') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Torna alle Note
+            </a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ url_for('docente_modifica_nota', nota_id=nota.id) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="titolo" class="form-label">Titolo</label>
+                    <input type="text" class="form-control" id="titolo" name="titolo" value="{{ nota.titolo }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="corso_id" class="form-label">Corso (opzionale)</label>
+                    <select class="form-select" id="corso_id" name="corso_id">
+                        <option value="">-- Nessun corso --</option>
+                        {% for corso in corsi %}
+                        <option value="{{ corso.id }}" {% if nota.corso_id == corso.id %}selected{% endif %}>{{ corso.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="contenuto" class="form-label">Contenuto</label>
+                    <textarea class="form-control" id="contenuto" name="contenuto" rows="10" required>{{ nota.contenuto }}</textarea>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

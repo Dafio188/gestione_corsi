@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if current_user.role == 'admin' %}
+    <h1 class="mb-4">Dashboard Amministratore</h1>
+    
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-4">
+        <div class="col">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Discenti</h5>
+                    <p class="card-text display-4">{{ stats.discenti_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_utenti') }}?role=discente" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Corsi</h5>
+                    <p class="card-text display-4">{{ stats.corsi_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_corsi') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Docenti</h5>
+                    <p class="card-text display-4">{{ stats.docenti_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_utenti') }}?role=docente" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Progetti</h5>
+                    <p class="card-text display-4">{{ stats.progetti_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_gestione_progetti') }}" class="btn btn-primary">Gestisci Progetti</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Test Completati</h5>
+                    <p class="card-text display-4">{{ stats.test_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_test') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Attestati Generati</h5>
+                    <p class="card-text display-4">{{ stats.attestati_count }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin_attestati') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% elif current_user.role == 'docente' %}
+    <!-- Docente dashboard content -->
+    <h1 class="mb-4">Dashboard Docente</h1>
+    <!-- Add docente dashboard content here -->
+    
+    {% elif current_user.role == 'discente' %}
+    <!-- Discente dashboard content -->
+    <h1 class="mb-4">Dashboard Discente</h1>
+    <!-- Add discente dashboard content here -->
+    
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Pagina non trovata - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 text-center">
+            <h1 class="display-1">404</h1>
+            <h2 class="mb-4">Pagina non trovata</h2>
+            <p class="lead">La pagina che stai cercando non esiste o è stata spostata.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">Torna alla Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

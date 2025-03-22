@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Amministratore - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Barra di navigazione secondaria per l'amministratore -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">Gestione Corsi PNRR</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_progetti') }}">
+                            <i class="bi bi-folder"></i> Progetti
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_corsi') }}">
+                            <i class="bi bi-book"></i> Corsi
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_utenti') }}">
+                            <i class="bi bi-people"></i> Discenti
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_docenti') }}">
+                            <i class="bi bi-person-video3"></i> Docenti
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_test') }}">
+                            <i class="bi bi-file-earmark-text"></i> Test
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_attestati') }}">
+                            <i class="bi bi-award"></i> Attestati
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_report') }}">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Report
+                        </a>
+                    </li>
+                </ul>
+                <span class="navbar-text">
+                    {{ current_user.nome }} {{ current_user.cognome }} <i class="bi bi-person-circle"></i>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <h1>Dashboard Amministratore</h1>
+    
+    <div class="jumbotron bg-light p-4 mb-4 rounded">
+        <h2>Benvenuto, {{ current_user.nome }} {{ current_user.cognome }}</h2>
+        <p>Questa è la dashboard per gli amministratori.</p>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Progetti</h5>
+                    <p class="card-text display-4">{{ progetti_count }}</p>
+                    <a href="{{ url_for('admin_progetti') }}" class="btn btn-dark">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Corsi</h5>
+                    <p class="card-text display-4">{{ corsi_count }}</p>
+                    <a href="{{ url_for('admin_corsi') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Utenti</h5>
+                    <p class="card-text display-4">{{ discenti_count }}</p>
+                    <a href="{{ url_for('admin_utenti') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Docenti</h5>
+                    <p class="card-text display-4">{{ docenti_count }}</p>
+                    <a href="{{ url_for('admin_docenti') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Test</h5>
+                    <p class="card-text display-4">{{ test_count }}</p>
+                    <a href="{{ url_for('admin_test') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Attestati</h5>
+                    <p class="card-text display-4">{{ attestati_count }}</p>
+                    <a href="{{ url_for('admin_attestati') }}" class="btn btn-light">Gestisci</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Report</h5>
+                    <p class="card-text display-4"><i class="bi bi-file-earmark-bar-graph"></i></p>
+                    <a href="{{ url_for('admin_report') }}" class="btn btn-light">Visualizza</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

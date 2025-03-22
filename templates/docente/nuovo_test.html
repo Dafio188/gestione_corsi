@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Nuovo Test - {{ corso.titolo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_corsi') }}">I Miei Corsi</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}">{{ corso.titolo }}</a></li>
+            <li class="breadcrumb-item active">Nuovo Test</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Nuovo Test</h1>
+        <div>
+            <a href="{{ url_for('docente_dashboard') }}" class="btn btn-secondary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+            </a>
+            <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Torna al Corso
+            </a>
+        </div>
+    </div>
+    
+    <!-- Resto del contenuto della pagina -->
+    <!-- ... -->
+</div>
+{% endblock %}

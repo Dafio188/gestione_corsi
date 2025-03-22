@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Risultati Test - {{ test.titolo }} - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Risultati Test: {{ test.titolo }}</h1>
+    <a href="{{ url_for('docente_dettaglio_corso', corso_id=test.corso_id) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna al Corso
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Informazioni Test</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-3 fw-bold">Corso:</div>
+            <div class="col-md-9">{{ test.corso.titolo }}</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3 fw-bold">Tipo:</div>
+            <div class="col-md-9">{{ test.tipo }}</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3 fw-bold">Link Forms:</div>
+            <div class="col-md-9">
+                {% if test.forms_link %}
+                    <a href="{{ test.forms_link }}" target="_blank">{{ test.forms_link }}</a>
+                {% else %}
+                    Non disponibile
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 fw-bold">File:</div>
+            <div class="col-md-9">
+                {% if test.file_path %}
+                    <a href="{{ url_for('download_file', filename=test.file_path.split('/')[-1]) }}">
+                        <i class="bi bi-download"></i> Scarica file
+                    </a>
+                {% else %}
+                    Non disponibile
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Risultati</h5>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addResultModal">
+            <i class="bi bi-plus-lg"></i> Aggiungi Risultato
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Discente</th>
+                        <th>Data Completamento</th>
+                        <th>Punteggio</th>
+                        <th>Superato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if risultati %}
+                        {% for risultato in risultati %}
+                        <tr>
+                            <td>{{ risultato.discente.nome }} {{ risultato.discente.cognome }}</td>
+                            <td>{{ risultato.data_completamento.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ risultato.punteggio }}</td>
+                            <td>
+                                {% if risultato.superato %}
+                                    <span class="badge bg-success">Superato</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Non Superato</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editResultModal{{ risultato.id }}">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </button>
+                                
+                                <!-- Modal per modificare il risultato -->
+                                <div class="modal fade" id="editResultModal{{ risultato.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Modifica Risultato</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form action="{{ url_for('docente_modifica_risultato', risultato_id=risultato.id) }}" method="POST">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="punteggio" class="form-label">Punteggio</label>
+                                                        <input type="number" class="form-control" id="punteggio" name="punteggio" 
+                                                               value="{{ risultato.punteggio }}" min="0" max="100" required>
+                                                    </div>
+                                                    <div class="mb-3 form-check">
+                                                        <input type="checkbox" class="form-check-input" id="superato" name="superato" 
+                                                               {% if risultato.superato %}checked{% endif %}>
+                                                        <label class="form-check-label" for="superato">Test Superato</label>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="data_completamento" class="form-label">Data Completamento</label>
+                                                        <input type="date" class="form-control" id="data_completamento" name="data_completamento" 
+                                                               value="{{ risultato.data_completamento.strftime('%Y-%m-%d') }}" required>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                    <button type="submit" class="btn btn-primary">Salva</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">Nessun risultato disponibile per questo test</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal per aggiungere risultati -->
+<div class="modal fade" id="addResultModal" tabindex="-1" aria-labelledby="addResultModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addResultModalLabel">Aggiungi Risultato Test</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('docente_aggiungi_risultato', test_id=test.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="discente_id" class="form-label">Seleziona Discente</label>
+                        <select class="form-select" id="discente_id" name="discente_id" required>
+                            <option value="">Seleziona un discente</option>
+                            {% for iscrizione in test.corso.iscrizioni %}
+                                {% if not iscrizione.discente.id in discenti_con_risultato %}
+                                    <option value="{{ iscrizione.discente.id }}">{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="punteggio" class="form-label">Punteggio</label>
+                        <input type="number" class="form-control" id="punteggio" name="punteggio" min="0" max="100" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="superato" name="superato">
+                        <label class="form-check-label" for="superato">Test Superato</label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_completamento" class="form-label">Data Completamento</label>
+                        <input type="date" class="form-control" id="data_completamento" name="data_completamento" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

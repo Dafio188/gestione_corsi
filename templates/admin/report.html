@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Report - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Report</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Report Progetti</h5>
+        </div>
+        <div class="card-body">
+            <p>Genera report di tutti i progetti o di un singolo progetto.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_excel') }}" method="post" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="progetti">
+                        <button type="submit" class="btn btn-success btn-block">
+                            <i class="bi bi-file-excel"></i> Esporta tutti i progetti in Excel
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="progetti">
+                        <button type="submit" class="btn btn-danger btn-block">
+                            <i class="bi bi-file-pdf"></i> Esporta tutti i progetti in PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h6>Report singolo progetto:</h6>
+            <form action="{{ url_for('admin_report_progetto') }}" method="get" class="form-inline">
+                <div class="input-group">
+                    <select name="progetto_id" class="form-control" required>
+                        <option value="">Seleziona un progetto</option>
+                        {% for progetto in progetti %}
+                        <option value="{{ progetto.id }}">{{ progetto.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">Visualizza</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Report Corsi</h5>
+        </div>
+        <div class="card-body">
+            <p>Genera report di tutti i corsi o di un singolo corso.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_excel') }}" method="post" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="default">
+                        <button type="submit" class="btn btn-success btn-block">
+                            <i class="bi bi-file-excel"></i> Esporta tutti i corsi in Excel
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="tipo_report" value="default">
+                        <button type="submit" class="btn btn-danger btn-block">
+                            <i class="bi bi-file-pdf"></i> Esporta tutti i corsi in PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h6>Report singolo corso:</h6>
+            <form action="{{ url_for('admin_report_corso') }}" method="get" class="form-inline">
+                <div class="input-group">
+                    <select name="corso_id" class="form-control" required>
+                        <option value="">Seleziona un corso</option>
+                        {% for corso in corsi %}
+                        <option value="{{ corso.id }}">{{ corso.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">Visualizza</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Statistiche</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Progetti</h5>
+                            <p class="card-text display-4">{{ progetti|length }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Corsi</h5>
+                            <p class="card-text display-4">{{ corsi|length }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Discenti</h5>
+                            <p class="card-text display-4">{{ discenti|length }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Docenti</h5>
+                            <p class="card-text display-4">{{ docenti|length }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

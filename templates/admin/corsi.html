@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestione Corsi</h1>
+        <a href="{{ url_for('admin_nuovo_corso') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuovo Corso
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Titolo</th>
+                            <th>Docente</th>
+                            <th>Data Inizio</th>
+                            <th>Data Fine</th>
+                            <th>Ore Totali</th>
+                            <th>Modalità</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for corso in corsi %}
+                        <tr>
+                            <td>{{ corso.titolo }}</td>
+                            <td>{{ corso.docente.nome }} {{ corso.docente.cognome }}</td>
+                            <td>{{ corso.data_inizio.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.data_fine.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ corso.ore_totali }}</td>
+                            <td>
+                                {% if corso.modalita == 'in_house' %}
+                                <span class="badge bg-primary">In House</span>
+                                {% else %}
+                                <span class="badge bg-info">Esterno</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if now > corso.data_fine %}
+                                <span class="badge bg-secondary">Completato</span>
+                                {% elif now >= corso.data_inizio and now <= corso.data_fine %}
+                                <span class="badge bg-success">In Corso</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Programmato</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-sm btn-info" title="Dettagli">
+                                        <i class="bi bi-info-circle"></i> Info
+                                    </a>
+                                    <a href="{{ url_for('admin_modifica_corso', corso_id=corso.id) }}" class="btn btn-sm btn-warning" title="Modifica">
+                                        <i class="bi bi-pencil"></i> Modifica
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ corso.id }}" title="Elimina">
+                                        <i class="bi bi-trash"></i> Elimina
+                                    </button>
+                                </div>
+                            </td>
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal{{ corso.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel">Conferma Eliminazione</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Sei sicuro di voler eliminare il corso "{{ corso.titolo }}"?
+                                            <p class="text-danger mt-2">
+                                                <strong>Attenzione:</strong> Questa azione eliminerà anche tutte le iscrizioni, i test e gli attestati associati a questo corso.
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                            <form action="{{ url_for('admin_elimina_corso', corso_id=corso.id) }}" method="post">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">Elimina</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

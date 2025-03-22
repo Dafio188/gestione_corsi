@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Utenti - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestione Utenti</h1>
+    <div>
+        <a href="{{ url_for('admin_importa_discenti') }}" class="btn btn-success me-2">
+            <i class="bi bi-file-earmark-excel"></i> Importa Discenti
+        </a>
+        <a href="{{ url_for('admin_nuovo_utente') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nuovo Utente
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utente in utenti %}
+                    <tr>
+                        <td>{{ utente.id }}</td>
+                        <td>{{ utente.username }}</td>
+                        <td>{{ utente.nome }}</td>
+                        <td>{{ utente.cognome }}</td>
+                        <td>{{ utente.email }}</td>
+                        <td>
+                            {% if utente.role == 'admin' %}
+                                <span class="badge bg-danger">Amministratore</span>
+                            {% elif utente.role == 'docente' %}
+                                <span class="badge bg-primary">Docente</span>
+                            {% else %}
+                                <span class="badge bg-success">Discente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('admin_modifica_utente', utente_id=utente.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal{{ utente.id }}">
+                                    <i class="bi bi-trash"></i> Elimina
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Place all modals outside the table but still inside the content block -->
+{% for utente in utenti %}
+<div class="modal fade" id="deleteModal{{ utente.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ utente.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel{{ utente.id }}">Conferma eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Sei sicuro di voler eliminare l'utente <strong>{{ utente.nome }} {{ utente.cognome }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form method="POST" action="{{ url_for('admin_elimina_utente', utente_id=utente.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+/* Add CSS to prevent modal flickering */
+.modal {
+    pointer-events: none;
+}
+.modal-dialog {
+    pointer-events: all;
+}
+.delete-btn {
+    position: relative;
+    z-index: 1;
+}
+</style>
+
+{% endblock %}

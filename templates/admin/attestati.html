@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Attestati - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Attestati</h1>
+    <div>
+        <a href="{{ url_for('admin_genera_attestati_automatici') }}" class="btn btn-success">
+            <i class="bi bi-magic"></i> Genera Attestati Automatici
+        </a>
+        <!-- Removed the "Nuovo Attestato" button as it's no longer needed -->
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Discente</th>
+                        <th>Corso</th>
+                        <th>Data Generazione</th>
+                        <th>File</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attestato in attestati %}
+                    <tr>
+                        <td>{{ attestato.id }}</td>
+                        <td>{{ attestato.discente.cognome }} {{ attestato.discente.nome }}</td>
+                        <td>{{ attestato.corso.titolo }}</td>
+                        <td>{{ attestato.data_generazione.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('download_attestato', attestato_id=attestato.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ attestato.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                
+                                <!-- Modal di conferma eliminazione -->
+                                <div class="modal fade" id="deleteModal{{ attestato.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ attestato.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ attestato.id }}">Conferma eliminazione</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Sei sicuro di voler eliminare questo attestato?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <form method="POST" action="{{ url_for('admin_elimina_attestato', attestato_id=attestato.id) }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-danger">Elimina</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Dettaglio Test - {{ test.titolo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Barra di navigazione secondaria -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_corsi') }}">I Miei Corsi</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}">{{ corso.titolo }}</a></li>
+            <li class="breadcrumb-item active">{{ test.titolo }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ test.titolo }}</h1>
+        <div>
+            <a href="{{ url_for('docente_dashboard') }}" class="btn btn-secondary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+            </a>
+            <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary mr-2">
+                <i class="bi bi-arrow-left"></i> Torna al Corso
+            </a>
+            <a href="{{ url_for('docente_modifica_test', corso_id=corso.id, test_id=test.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Modifica
+            </a>
+        </div>
+    </div>
+    
+    <!-- Resto del contenuto della pagina -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2>{{ test.titolo }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Tipo:</strong> 
+                        {% if test.tipo == 'ingresso' %}
+                            <span class="badge bg-primary">Ingresso</span>
+                        {% elif test.tipo == 'intermedio' %}
+                            <span class="badge bg-warning">Intermedio</span>
+                        {% elif test.tipo == 'finale' %}
+                            <span class="badge bg-success">Finale</span>
+                        {% endif %}
+                    </p>
+                    {% if test.forms_link %}
+                        <p><strong>Link al test:</strong> <a href="{{ test.forms_link }}" target="_blank">{{ test.forms_link }}</a></p>
+                    {% endif %}
+                    {% if test.file_path %}
+                        <p><strong>File:</strong> <a href="{{ url_for('static', filename=test.file_path) }}" target="_blank">Scarica</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risultati Test -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h3>Risultati Test</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('docente_salva_risultati_test', corso_id=corso.id, test_id=test.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Discente</th>
+                                <th>Punteggio</th>
+                                <th>Superato</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for iscrizione in iscrizioni %}
+                                <tr>
+                                    <td>{{ iscrizione.discente.nome }} {{ iscrizione.discente.cognome }}</td>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               name="punteggio_{{ iscrizione.id }}" 
+                                               value="{{ risultati[iscrizione.id].punteggio if iscrizione.id in risultati else '' }}"
+                                               min="0" max="100" step="0.1">
+                                    </td>
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="superato_{{ iscrizione.id }}" 
+                                                   id="superato_{{ iscrizione.id }}"
+                                                   {% if iscrizione.id in risultati and risultati[iscrizione.id].superato %}checked{% endif %}>
+                                            <label class="form-check-label" for="superato_{{ iscrizione.id }}">
+                                                Superato
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if iscrizione.id in risultati %}
+                                            {{ risultati[iscrizione.id].data_completamento.strftime('%d/%m/%Y') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary">Salva Risultati</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

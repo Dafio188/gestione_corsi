@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Profilo - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Il Mio Profilo</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Informazioni Personali</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nome" class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="nome" name="nome" value="{{ current_user.nome }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="cognome" class="form-label">Cognome</label>
+                    <input type="text" class="form-control" id="cognome" name="cognome" value="{{ current_user.cognome }}" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" value="{{ current_user.username }}" disabled>
+                <div class="form-text">L'username non può essere modificato.</div>
+            </div>
+            <div class="mb-3">
+                <label for="role" class="form-label">Ruolo</label>
+                <input type="text" class="form-control" id="role" value="{% if current_user.role == 'admin' %}Amministratore{% elif current_user.role == 'docente' %}Docente{% else %}Discente{% endif %}" disabled>
+                <div class="form-text">Il ruolo non può essere modificato.</div>
+            </div>
+            <hr>
+            <div class="mb-3">
+                <label for="password" class="form-label">Nuova Password</label>
+                <input type="password" class="form-control" id="password" name="password">
+                <div class="form-text">Lascia vuoto se non vuoi cambiare la password.</div>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Salva Modifiche
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

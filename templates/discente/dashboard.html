@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Discente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Dashboard Discente</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Corsi Iscritti</h5>
+                    <p class="card-text display-4">{{ iscrizioni|length }}</p>
+                    <a href="{{ url_for('discente_corsi') }}" class="btn btn-light">Visualizza</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Corsi Completati</h5>
+                    <p class="card-text display-4">{{ corsi_completati }}</p>
+                    <a href="{{ url_for('discente_corsi') }}" class="btn btn-light">Visualizza</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Attestati</h5>
+                    <p class="card-text display-4">{{ attestati|length }}</p>
+                    <a href="{{ url_for('discente_attestati') }}" class="btn btn-light">Visualizza</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>I Miei Corsi</h3>
+            <a href="{{ url_for('discente_corsi') }}" class="btn btn-primary">Vedi Tutti</a>
+        </div>
+        <div class="card-body">
+            <!-- Tabella corsi recenti -->
+            <!-- ... -->
+        </div>
+    </div>
+</div>
+{% endblock %}

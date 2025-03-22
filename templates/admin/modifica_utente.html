@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Utente - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Modifica Utente</h1>
+    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ utente.username }}" required>
+                    <div class="invalid-feedback">
+                        Inserisci un username
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ utente.email }}" required>
+                    <div class="invalid-feedback">
+                        Inserisci un'email valida
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nome" class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="nome" name="nome" value="{{ utente.nome }}" required>
+                    <div class="invalid-feedback">
+                        Inserisci il nome
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="cognome" class="form-label">Cognome</label>
+                    <input type="text" class="form-control" id="cognome" name="cognome" value="{{ utente.cognome }}" required>
+                    <div class="invalid-feedback">
+                        Inserisci il cognome
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="role" class="form-label">Ruolo</label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="admin" {% if utente.role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="docente" {% if utente.role == 'docente' %}selected{% endif %}>Docente</option>
+                        <option value="discente" {% if utente.role == 'discente' %}selected{% endif %}>Discente</option>
+                    </select>
+                    <div class="invalid-feedback">
+                        Seleziona un ruolo
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3 discente-field" {% if utente.role != 'discente' %}style="display: none;"{% endif %}>
+                    <label for="progetto_id" class="form-label">Progetto</label>
+                    <select class="form-select" id="progetto_id" name="progetto_id">
+                        <option value="">-- Nessun progetto --</option>
+                        {% for progetto in progetti %}
+                            <option value="{{ progetto.id }}" {% if utente.progetto_id == progetto.id %}selected{% endif %}>{{ progetto.titolo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row discente-fields" {% if utente.role != 'discente' %}style="display: none;"{% endif %}>
+                <div class="col-md-6 mb-3">
+                    <label for="codice_fiscale" class="form-label">Codice Fiscale</label>
+                    <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale" value="{{ utente.codice_fiscale or '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="unita_org" class="form-label">Unità Organizzativa / Comune</label>
+                    <input type="text" class="form-control" id="unita_org" name="unita_org" value="{{ utente.unita_org or '' }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password (lasciare vuoto per non modificare)</label>
+                <input type="password" class="form-control" id="password" name="password">
+            </div>
+            <button type="submit" class="btn btn-primary">Salva</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelect = document.getElementById('role');
+        const discenteFields = document.querySelectorAll('.discente-fields');
+        const discenteField = document.querySelectorAll('.discente-field');
+        
+        roleSelect.addEventListener('change', function() {
+            if (this.value === 'discente') {
+                discenteFields.forEach(field => field.style.display = 'flex');
+                discenteField.forEach(field => field.style.display = 'block');
+            } else {
+                discenteFields.forEach(field => field.style.display = 'none');
+                discenteField.forEach(field => field.style.display = 'none');
+            }
+        });
+    });
+</script>
+{% endblock %}
