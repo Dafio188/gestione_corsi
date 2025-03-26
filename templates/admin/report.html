@@ -24,13 +24,9 @@
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post" class="mb-3">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="tipo_report" value="progetti">
-                        <button type="submit" class="btn btn-danger btn-block">
-                            <i class="bi bi-file-pdf"></i> Esporta tutti i progetti in PDF
-                        </button>
-                    </form>
+                    <button onclick="exportReportPDF('progetti')" class="btn btn-danger btn-block">
+                        <i class="bi bi-file-pdf"></i> Esporta tutti i progetti in PDF
+                    </button>
                 </div>
             </div>
             
@@ -71,13 +67,9 @@
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post" class="mb-3">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="tipo_report" value="default">
-                        <button type="submit" class="btn btn-danger btn-block">
-                            <i class="bi bi-file-pdf"></i> Esporta tutti i corsi in PDF
-                        </button>
-                    </form>
+                    <button onclick="exportReportPDF('default')" class="btn btn-danger btn-block">
+                        <i class="bi bi-file-pdf"></i> Esporta tutti i corsi in PDF
+                    </button>
                 </div>
             </div>
             

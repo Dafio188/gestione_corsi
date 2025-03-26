@@ -1,0 +1,81 @@
+Municipality Name	Email Address	Responsible Person (Role)	Phone Number	Notes
+Albi	ufficio.amministrativo@comune.albi.cz.it	RESP. AREA AMMINISTRATIVA	0961/923303	Area Amministrativa is responsible for Personale 
+Amaroni	protocollo@comunediamaroni.it	Antonietta Carminitana (Protocollo e Affari Generali)	0961913030	Protocollo e Affari Generali 
+Amato	protocollo.amato@asmepec.it	Segreteria Comunale (General Secretariat)	0961 068085	General contact, inquire for Ufficio Personale 
+Andali	protocollo@pec.comunediandali.it	Sindaco (Mayor)	0961.935095	General contact, inquire for Ufficio Personale 
+Argusto	sindaco@pec.comuneargusto.it	Sindaco (Mayor)	0967 91081	General contact, inquire for Ufficio Personale 
+Badolato	amministrativo.comunebadolato@asmepec.it	Commissario Prefettizio (Prefectural Commissioner)	+39 0967 85000	General contact, inquire for Ufficio Personale 
+Belcastro	protocollo.belcastro@asmepec.it	Sindaco (Mayor)	0961 932090	General contact, inquire for Ufficio Personale 
+Borgia	protocollo.borgia@asmepec.it	Sindaco (Mayor)	0961/951357	General contact, inquire for Ufficio Personale 
+Botricello	personalebotricello@virgilio.it	Galli Alfredo (Responsabile del procedimento)	0961 967211 int.224	Servizio Personale 
+Caraffa di Catanzaro	protocollo.caraffacz@asmepec.it	Ufficio Amministrativo (Administrative Office)	0961.957811	Ufficio Personale is under Aree Amministrative 
+Cardinale	protocollo@comune.cardinale.cz.it	Sindaco (Mayor)	0967/93051	General contact, inquire for Ufficio Personale 
+Carlopoli	protocollo@comune.carlopoli.cz.it	Ufficio Servizi Amministrativi (Administrative Services Office)	0968 82025	Inquire within Ufficio Servizi Amministrativi 
+Catanzaro	personale@comune.catanzaro.it	Dott. Antonino Ferraiolo (Dirigente)	0961 881706	Ufficio Personale e Organizzazione 
+Cenadi	comune.cenadi@asmepec.it	Sindaco (Mayor)	0967 955105	General contact, inquire for Ufficio Personale 
+Centrache	demografici.centrache@asmepec.it	Sindaco (Mayor)	0967955126	General contact, inquire for Ufficio Personale 
+Cerva	protocollo.cerva@asmepec.it	Sindaco (Mayor)	0961939201	General contact, inquire for Ufficio Personale 
+Chiaravalle Centrale	comunechiaravallecentrale@asmepec.it	Sindaco (Mayor)	096791031	General contact, inquire for Ufficio Personale 
+Cicala	protocollo.cicala@asmepec.it	Sindaco (Mayor)	0968-85294	General contact, inquire for Ufficio Personale 
+Conflenti	comuneconflenti@asmepec.it	Ufficio Amministrativo (Administrative Office)	0968-64054	Ufficio Amministrativo manages Personale 
+Cortale	segreteria@comune.cortale.cz.it	Sindaco (Mayor)	0968 76018	General contact, inquire for Settore Bilancio e Personale 
+Cropani	protocollo@comune.cropani.cz.it	Sindaco (Mayor)	0961 557636	General contact, inquire for Uffici e Servizi 
+Curinga	protocollo@pec.comune.curinga.cz.it	Sindaco (Mayor)	0968-739311	General contact, inquire for Uffici e Servizi 
+Davoli	comune.davoli@pcert.postecert.it	Sindaco (Mayor)	0967-535674	General contact, inquire for Uffici 
+Decollatura	servizigenerali@pec.comune.decollatura.cz.it	Sindaco (Mayor)	0968-61169	General contact, inquire for Uffici 
+Falerna	protocollo.falerna@asmepec.it	Ufficio del Segretario Capo (Head Secretary's Office)	0968.95477	
+Feroleto Antico	segretario.feroletoantico@asmepec.it	Ufficio Ragioneria, Economato, Personale (Accounting, Purchasing, and Personnel Office)	0968425834	
+Fossato Serralta	gabinetto.sindaco.fossato@asmepec.it	Sindaco (Mayor)	0961925393	General contact, inquire for Uffici e servizi 
+Gagliato	comune.gagliato@asmepec.it	Settore Amministrativo (Administrative Sector)	096797049	
+Gasperina	demografici.gasperina@asmepec.it	Sindaco (Mayor)	0967 486483	General contact, inquire for Uffici e servizi 
+Gimigliano	sindaco_gimigliano@asmepec.it	Sindaco (Mayor)	0961 995014	General contact, inquire for Uffici or Personale Amministrativo 
+Girifalco	protocollo.girifalco@asmepec.it	Sindaco (Mayor)	+39 0968 749017	General contact, inquire for Uffici 
+Gizzeria	anagrafe.gizzeria@asmepec.it	Sindaco (Mayor)	0968403704	General contact, inquire for Uffici 
+Guardavalle	protocollo.guardavalle@asmepec.it	Sindaco (Mayor)	0967 82067	General contact, inquire for uffici 
+Isca sullo Ionio	vincenzomirarchi.iscasulloionio@asmepec.it	Sindaco (Mayor)	0967-546087	General contact, inquire for Uffici or Personale amministrativo 
+Jacurso	segretario.jacurso@asmepec.it	Segretario Comunale (Municipal Secretary)	0968-70000	
+Lamezia Terme	protocollo@pec.comunelameziaterme.it	Ufficio Gestione Risorse Umane (Human Resources Management Office)	0968.2071	
+Magisano	amministrazione.magisano@asmepec.it	Sindaco (Mayor)	0961926015	General contact, inquire for Uffici e servizi 
+Maida	areamministrativa.maida@asmepec.it	Sindaco (Mayor)	0968-751869	General contact, inquire for Uffici or Personale Amministrativo 
+Marcedusa	segretario.marcedusa@asmepec.it	Segretario Comunale (Municipal Secretary)	0961-932010	
+Marcellinara	sindaco@pec.comunemarcellinara.it	AREA AMMINISTRATIVA (Administrative Area)	0961-996133	
+Martirano	segreteria.martirano@asmepec.it	Sindaco (Mayor)	096899040	General contact, inquire for Uffici 
+Martirano Lombardo	protocollo.comunemartiranolombardo@asmepec.it	Sindaco (Mayor)	096899034	General contact, inquire for Uffici 
+Miglierina	sindaco.miglierina@asmepec.it	Sindaco (Mayor)	0961-993041	General contact, inquire for Uffici or Personale Amministrativo 
+Montauro	sindacomontauro@asmepec.it	Sindaco (Mayor)	0967-548123	General contact, inquire for UFFICI E SERVIZI 
+Montepaone	sindaco@pec.comune.montepaone.cz.it	Sindaco (Mayor)	0967-49294	General contact, inquire for Uffici 
+Motta Santa Lucia	amministrativo.mottasantalucia@asmepec.it	Sindaco (Mayor)	0968 65032	General contact, inquire for Uffici e servizi 
+Nocera Terinese	protocollo.noceraterinese@asmepec.it	Ufficio Risorse Umane - Personale (Human Resources Office - Personnel)	0968.91300	
+Olivadi	comune.olivadi@asmepec.it	Sindaco (Mayor)	0967 633072	General contact, inquire for Uffici e servizi 
+Palermiti	protocollo.palermiti@asmepec.it	Sindaco (Mayor)	0961917167	General contact, inquire for Uffici 
+Pentone	sindaco.pentone@asmepec.it	Sindaco (Mayor)	0961 925076	General contact, inquire for Uffici 
+Petrizzi	demografici.petrizzi@asmepec.it	Sindaco (Mayor)	0967-94004	General contact, inquire for Uffici 
+Petronà	protocollo.petrona@asmepec.it	Sindaco (Mayor)	0961938809	General contact, inquire for Uffici e servizi 
+Pianopoli	segretario.pianopoli@asmepec.it	Sindaco (Mayor)	0968-32071	General contact, inquire for Uffici or Personale Amministrativo 
+Platania	amministrativo.platania@asmepec.it	Sindaco (Mayor)	0968-205010	General contact, inquire for Uffici or Personale Amministrativo 
+San Floro	sindaco.sanfloro@asmepec.it	Sindaco (Mayor)	0961-050253	General contact, inquire for Uffici 
+San Mango d'Aquino	protocollo@pec.comunedisanmangodaquino.it	Sindaco (Mayor)	0968-96003	General contact, inquire for Uffici 
+San Pietro a Maida	protocollo.sanpietroamaida@asmepec.it	Sindaco (Mayor)	0968-728262	General contact, inquire for Personale Amministrativo 
+San Pietro Apostolo	protocollo.sanpietroapostolo@asmepec.it	Sindaco (Mayor)	0961-994035	General contact, inquire for Uffici or Personale Amministrativo 
+San Sostene	prot.sansostene@asmepec.it	Sindaco (Mayor)	0967-533254	General contact, inquire for Uffici e servizi 
+San Vito sullo Ionio	elettorale.sanvitosulloionio@asmepec.it	Sindaco (Mayor)	0967-96500	General contact, inquire for Uffici e servizi 
+Sant'Andrea Apostolo dello Ionio	protocollo@pec.santandrea.gov.it	Sindaco (Mayor)	0967-47164	General contact, inquire for Area Amministrativa 
+Santa Caterina dello Ionio	demografaire@pec.it	Sindaco (Mayor)	0967-84306	General contact, inquire for Uffici 
+Satriano	protocollo.satriano@asmepec.it	Sindaco (Mayor)	0967-543810	General contact, inquire for Uffici e Servizi 
+Sellia	protocollosellia@asmepec.it	Sindaco (Mayor)	0961-483049	General contact, inquire for Uffici 
+Sellia Marina	sindaco.selliamarina@asmepec.it	Sindaco (Mayor)	0961-964125	General contact, inquire for Uffici 
+Serrastretta	sindaco.serrastretta@asmepec.it	Sindaco (Mayor)	0968-81001	General contact, inquire for Uffici 
+Sersale	sindaco.sersale@asmepec.it	Area Finanziaria e Personale (Financial and Personnel Area)	0961-930928	
+Settingiano	protocollo.settingiano@asmepec.it	Sindaco (Mayor)	0961997031	General contact, inquire for Uffici 
+Simeri Crichi	protocollocomunesimericrichi@asmepec.it	Sindaco (Mayor)	0961-967211	General contact, inquire for Uffici 
+Sorbo San Basile	poliziamunicipale.sorbosanbasile@asmepec.it	Sindaco (Mayor)	0961921108	General contact, inquire for Uffici 
+Soverato	comunesoverato@asmepec.it	Settore II - Economico-Finanziario / Demografico e Personale (Economic-Financial / Demographic and Personnel Sector)	0967538233	
+Soveria Mannelli	protocollo@pec.soveria.it	Sindaco (Mayor)	+39.0968.662006	General contact, inquire for Uffici 
+Soveria Simeri	areaamministrativa.soveriasimeri@asmepec.it	Personale amministrativo (Administrative Staff)	0961355376	
+Squillace	affarigenerali@comune.squillace.cz.it	Sindaco (Mayor)	0961914020	General contact, inquire for Uffici or Personale amministrativo 
+Stalettì	sindaco.staletti@asmepec.it	Sindaco (Mayor)	0961 918802	General contact, inquire for Uffici e servizi 
+Taverna	protocollo.taverna@asmepec.it	Sindaco (Mayor)	0961-921058	General contact, inquire for Uffici 
+Tiriolo	amministrativa.tiriolo@asmepec.it	Ufficio Personale (Personnel Office)	0961990836	
+Torre di Ruggiero	areademograficatorrediruggiero@asmepec.it	Area Amministrativa (Administrative Area)	096793112	
+Vallefiorita	sindaco.vallefiorita@asmepec.it	Sindaco (Mayor)	0961 919821	General contact, inquire for Uffici e Servizi 
+Zagarise	segreteria.zagarise@asmepec.it	Sindaco (Mayor)	961.937014	General contact, inquire for Uffici 

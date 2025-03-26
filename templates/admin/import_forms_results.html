@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Importa Risultati da Microsoft Forms{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Importa Risultati da Microsoft Forms</h1>
+    <p>Test: <strong>{{ test.titolo }}</strong> per il corso <strong>{{ corso.titolo }}</strong></p>
+    
+    <ul class="nav nav-tabs" id="importTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" id="paste-tab" data-toggle="tab" href="#paste" role="tab">Copia-Incolla</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" id="excel-tab" data-toggle="tab" href="#excel" role="tab">File Excel</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="link-tab" data-toggle="tab" href="#link" role="tab">Link Forms</a>
+        </li>
+    </ul>
+    
+    <div class="tab-content mt-3" id="importTabsContent">
+        <div class="tab-pane fade" id="paste" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    Istruzioni per Copia-Incolla
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Apri il tuo Microsoft Forms e vai ai risultati del test</li>
+                        <li>Clicca su "Apri in Excel" per esportare i risultati</li>
+                        <li>In Excel, seleziona tutte le celle con i dati (inclusa l'intestazione)</li>
+                        <li>Copia i dati selezionati (Ctrl+C)</li>
+                        <li>Incolla i dati nel campo di testo qui sotto (Ctrl+V)</li>
+                        <li>Clicca su "Importa Risultati"</li>
+                    </ol>
+                    <p class="text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Assicurati che i dati contengano almeno una colonna con l'email del discente e una colonna con il punteggio.
+                    </p>
+                </div>
+            </div>
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="import_method" value="paste">
+                <div class="form-group">
+                    <label for="forms_data">Dati da Microsoft Forms (formato CSV/Excel):</label>
+                    <textarea class="form-control" id="forms_data" name="forms_data" rows="10" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-file-import"></i> Importa Risultati
+                </button>
+                <a href="{{ url_for('admin_test_risultati', test_id=test.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Torna ai Risultati
+                </a>
+            </form>
+        </div>
+        
+        <div class="tab-pane fade show active" id="excel" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    Istruzioni per File Excel
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Apri il tuo Microsoft Forms e vai ai risultati del test</li>
+                        <li>Clicca su "Apri in Excel" per esportare i risultati</li>
+                        <li>Salva il file Excel sul tuo computer</li>
+                        <li>Carica il file Excel qui sotto</li>
+                        <li>Clicca su "Importa Risultati"</li>
+                    </ol>
+                    <p class="text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Il sistema cercherà automaticamente le colonne con l'email del discente e il punteggio totale.
+                    </p>
+                </div>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="import_method" value="excel">
+                <div class="form-group">
+                    <label for="excel_file">File Excel esportato da Microsoft Forms:</label>
+                    <input type="file" class="form-control-file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-file-import"></i> Importa Risultati
+                </button>
+                <a href="{{ url_for('admin_test_risultati', test_id=test.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Torna ai Risultati
+                </a>
+            </form>
+        </div>
+        
+        <div class="tab-pane fade" id="link" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    Istruzioni per Link Forms
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Apri il tuo Microsoft Forms e vai ai risultati del test</li>
+                        <li>Copia l'URL del form o della pagina dei risultati</li>
+                        <li>Incolla l'URL nel campo qui sotto</li>
+                        <li>Clicca su "Salva Link"</li>
+                    </ol>
+                    <p class="text-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Nota: L'importazione diretta da link è in fase di sviluppo. Per ora, il link verrà salvato ma dovrai usare il metodo di caricamento Excel o copia-incolla.
+                    </p>
+                </div>
+            </div>
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="import_method" value="link">
+                <div class="form-group">
+                    <label for="forms_link">Link Microsoft Forms:</label>
+                    <input type="url" class="form-control" id="forms_link" name="forms_link" 
+                           value="{{ test.forms_link }}" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salva Link
+                </button>
+                <a href="{{ url_for('admin_test_risultati', test_id=test.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Torna ai Risultati
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

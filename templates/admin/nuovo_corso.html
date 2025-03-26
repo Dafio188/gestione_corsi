@@ -3,124 +3,109 @@
 {% block title %}Nuovo Corso - Gestione Corsi PNRR{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Nuovo Corso</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('admin_nuovo_corso') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
-                <div class="mb-3">
-                    <label for="titolo" class="form-label">Titolo</label>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Nuovo Corso</h1>
+    <a href="{{ url_for('admin_corsi') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Torna alla lista
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="titolo" class="form-label">Titolo del Corso</label>
                     <input type="text" class="form-control" id="titolo" name="titolo" required>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="descrizione" class="form-label">Descrizione</label>
-                    <textarea class="form-control" id="descrizione" name="descrizione" rows="3"></textarea>
+                <div class="col-md-6 mb-3">
+                    <label for="docente_id" class="form-label">Docente</label>
+                    <select class="form-select" id="docente_id" name="docente_id" required>
+                        <option value="">Seleziona un docente</option>
+                        {% for docente in docenti %}
+                        <option value="{{ docente.id }}">{{ docente.nome }} {{ docente.cognome }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="ore_totali" class="form-label">Ore Totali</label>
-                    <input type="number" step="0.5" class="form-control" id="ore_totali" name="ore_totali" required>
-                </div>
-                
-                <div class="mb-3">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label for="data_inizio" class="form-label">Data Inizio</label>
                     <input type="date" class="form-control" id="data_inizio" name="data_inizio" required>
                 </div>
-                
-                <div class="mb-3">
+                <div class="col-md-6 mb-3">
                     <label for="data_fine" class="form-label">Data Fine</label>
                     <input type="date" class="form-control" id="data_fine" name="data_fine" required>
                 </div>
-                
-                <div class="mb-3">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="ore_totali" class="form-label">Ore Totali</label>
+                    <input type="number" class="form-control" id="ore_totali" name="ore_totali" required>
+                </div>
+                <div class="col-md-6 mb-3">
                     <label for="progetto_id" class="form-label">Progetto</label>
-                    <select class="form-select" id="progetto_id" name="progetto_id">
+                    <select class="form-select" id="progetto_id" name="progetto_id" required>
                         <option value="">Seleziona un progetto</option>
                         {% for progetto in progetti %}
                         <option value="{{ progetto.id }}">{{ progetto.titolo }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="progetto_riferimento" class="form-label">Riferimento Progetto</label>
-                    <input type="text" class="form-control" id="progetto_riferimento" name="progetto_riferimento">
-                </div>
-                
-                <div class="mb-3">
-                    <label for="docente_id" class="form-label">Docente</label>
-                    <select class="form-select" id="docente_id" name="docente_id" required>
-                        {% for docente in docenti %}
-                        <option value="{{ docente.id }}">{{ docente.nome }} {{ docente.cognome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="modalita" class="form-label">Modalità di Erogazione</label>
-                    <select class="form-control" id="modalita" name="modalita" required onchange="toggleModalitaFields()">
-                        <option value="in_house">In House</option>
+            </div>
+            
+            <div class="mb-3">
+                <label for="descrizione" class="form-label">Descrizione</label>
+                <textarea class="form-control" id="descrizione" name="descrizione" rows="4"></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="modalita" class="form-label">Modalità</label>
+                    <select class="form-select" id="modalita" name="modalita" required onchange="toggleWebinarLink()">
+                        <option value="presenza">In Presenza</option>
                         <option value="webinar">Webinar</option>
-                        <option value="e_learning">E-Learning</option>
+                        <option value="misto">Misto</option>
                     </select>
                 </div>
-                
-                <div id="indirizzo_container" class="mb-3">
-                    <label for="indirizzo" class="form-label">Indirizzo</label>
-                    <input type="text" class="form-control" id="indirizzo" name="indirizzo" placeholder="Inserisci l'indirizzo del corso">
-                </div>
-                
-                <div id="link_webinar_container" class="mb-3" style="display: none;">
+                <div class="col-md-6 mb-3" id="webinarLinkContainer" style="display: none;">
                     <label for="link_webinar" class="form-label">Link Webinar</label>
-                    <input type="text" class="form-control" id="link_webinar" name="link_webinar" placeholder="Inserisci il link del webinar">
+                    <input type="url" class="form-control" id="link_webinar" name="link_webinar" 
+                           placeholder="https://www.example.com/webinar">
+                    <small class="text-muted">Inserisci un URL completo, incluso https://</small>
                 </div>
-                
-                <div id="piattaforma_container" class="mb-3" style="display: none;">
-                    <label for="piattaforma" class="form-label">Piattaforma E-Learning</label>
-                    <input type="text" class="form-control" id="piattaforma" name="piattaforma" placeholder="Inserisci la piattaforma e-learning">
-                </div>
-                
-                <div class="mb-3">
-                    <label for="orario" class="form-label">Orario</label>
-                    <input type="text" class="form-control" id="orario" name="orario" placeholder="Inserisci l'orario del corso">
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Crea Corso</button>
-                <a href="{{ url_for('admin_corsi') }}" class="btn btn-secondary">Annulla</a>
-            </form>
-        </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="materiale" class="form-label">Materiale Didattico (opzionale)</label>
+                <input type="file" class="form-control" id="materiale" name="materiale">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Crea Corso</button>
+        </form>
     </div>
 </div>
-{% endblock %}
 
 <script>
-function toggleModalitaFields() {
+function toggleWebinarLink() {
     const modalita = document.getElementById('modalita').value;
-    const indirizzoContainer = document.getElementById('indirizzo_container');
-    const linkWebinarContainer = document.getElementById('link_webinar_container');
-    const piattaformaContainer = document.getElementById('piattaforma_container');
+    const webinarLinkContainer = document.getElementById('webinarLinkContainer');
     
-    // Hide all containers first
-    indirizzoContainer.style.display = 'none';
-    linkWebinarContainer.style.display = 'none';
-    piattaformaContainer.style.display = 'none';
-    
-    // Show container based on selected modality
-    if (modalita === 'in_house') {
-        indirizzoContainer.style.display = 'block';
-    } else if (modalita === 'webinar') {
-        linkWebinarContainer.style.display = 'block';
-    } else if (modalita === 'e_learning') {
-        piattaformaContainer.style.display = 'block';
+    if (modalita === 'webinar' || modalita === 'misto') {
+        webinarLinkContainer.style.display = 'block';
+    } else {
+        webinarLinkContainer.style.display = 'none';
     }
 }
 
-// Initialize on page load
+// Run on page load
 document.addEventListener('DOMContentLoaded', function() {
-    toggleModalitaFields();
+    toggleWebinarLink();
 });
 </script>
+{% endblock %}

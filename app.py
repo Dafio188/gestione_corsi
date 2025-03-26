@@ -2,7 +2,7 @@
 @login_required
 @role_required(['docente'])
 def docente_iscrizioni_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     
     # Verifica che il corso appartenga al docente
     if corso.docente_id != current_user.id:
@@ -20,7 +20,7 @@ def aggiorna_ore():
         iscrizione_id = request.form.get('iscrizione_id')
         ore_frequentate = float(request.form.get('ore_frequentate'))
         
-        iscrizione = Iscrizione.query.get_or_404(iscrizione_id)
+        iscrizione = Iscrizione.query.filter_by(id=iscrizione_id).first_or_404()
         
         # Verifica che il corso appartenga al docente
         if iscrizione.corso.docente_id != current_user.id:
@@ -41,7 +41,7 @@ def valuta_test():
         risultato_id = request.form.get('risultato_id')
         punteggio = float(request.form.get('punteggio'))
         
-        risultato = RisultatoTest.query.get_or_404(risultato_id)
+        risultato = RisultatoTest.query.filter_by(id=risultato_id).first_or_404()
         
         # Verifica che il test appartenga a un corso del docente
         if risultato.test.corso.docente_id != current_user.id:
@@ -66,7 +66,7 @@ def discente_corsi():
 @login_required
 @role_required(['discente'])
 def discente_dettaglio_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     iscrizione = Iscrizione.query.filter_by(
         discente_id=current_user.id,
         corso_id=corso_id
@@ -88,7 +88,7 @@ def discente_dettaglio_corso(corso_id):
 @login_required
 @role_required(['discente'])
 def discente_test(test_id):
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verifica che il discente sia iscritto al corso
     iscrizione = Iscrizione.query.filter_by(
@@ -123,7 +123,7 @@ def discente_attestati():
 @login_required
 @role_required(['discente'])
 def scarica_attestato(attestato_id):
-    attestato = Attestato.query.get_or_404(attestato_id)
+    attestato = Attestato.query.filter_by(id=attestato_id).first_or_404()
     
     # Verifica che l'attestato appartenga al discente
     if attestato.iscrizione.discente_id != current_user.id:
@@ -500,10 +500,78 @@ def carica_risultati_test():
         file = request.files.get('file_excel')
         
         if file and file.filename:
-            # Qui andrebbe implementata la logica per leggere il file Excel
-            # e caricare i risultati nel database
+            # Verifica che il file sia in formato Excel
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                flash('Il file deve essere in formato Excel (.xlsx o .xls)', 'danger')
+                if current_user.role == 'admin':
+                    return redirect(url_for('admin_test'))
+                else:
+                    return redirect(url_for('docente_test'))
             
-            flash('Risultati caricati con successo!', 'success')
+            # Salva temporaneamente il file
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join('uploads', 'temp', filename)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            file.save(temp_path)
+            
+            try:
+                # Leggi il file Excel con pandas
+                import pandas as pd
+                df = pd.read_excel(temp_path)
+                
+                # Usa le colonne specifiche indicate dall'utente
+                # Colonna F (5) = Total points, Colonna U (20) = Indirizzo Email
+                # Colonna I (8) = Nome, Colonna L (11) = Cognome
+                # Colonna O (14) = Comune di appartenenza, Colonna R (17) = Poit
+                
+                # Verifica che ci siano abbastanza colonne nel file
+                if len(df.columns) < 21:  # Colonna U è indice 20
+                    flash(f'Il file Excel non contiene tutte le colonne necessarie. Sono richieste almeno 21 colonne.', 'danger')
+                    os.remove(temp_path)  # Rimuovi il file temporaneo
+                    if current_user.role == 'admin':
+                        return redirect(url_for('admin_test'))
+                    else:
+                        return redirect(url_for('docente_test'))
+                
+                # Ottieni il corso associato al test
+                test = Test.query.filter_by(id=test_id).first_or_404()
+                corso_id = test.corso_id
+                
+                # Processa ogni riga
+                results_count = 0
+                for _, row in df.iterrows():
+                    # Estrai i dati dalle colonne specifiche
+                    # Nota: in pandas, le colonne sono 0-indexed, quindi F è 5, I è 8, ecc.
+                    try:
+                        total_points = str(row.iloc[5]).strip() if len(row) > 5 else ''
+                        nome = str(row.iloc[8]).strip() if len(row) > 8 else ''
+                        cognome = str(row.iloc[11]).strip() if len(row) > 11 else ''
+                        comune = str(row.iloc[14]).strip() if len(row) > 14 else ''
+                        email = str(row.iloc[20]).strip() if len(row) > 20 else ''
+                        
+                        # Usa total_points come punteggio
+                        score_text = total_points
+                    except Exception as e:
+                        print(f"Errore nell'estrazione dei dati dalla riga: {str(e)}")
+                        continue
+                    
+                    # Salta righe con email o punteggio vuoti
+                    if not email or email == 'nan' or not score_text or score_text == 'nan':
+                        continue
+                    
+                    # Processa il risultato
+                    from run import process_test_result
+                    results_count += process_test_result(email, score_text, test_id, corso_id)
+                
+                db.session.commit()
+                flash(f'Importati {results_count} risultati dal file Excel', 'success')
+                
+            except Exception as e:
+                flash(f'Errore durante l'elaborazione del file Excel: {str(e)}', 'danger')
+            finally:
+                # Rimuovi il file temporaneo
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
         else:
             flash('Nessun file selezionato!', 'danger')
         
@@ -598,7 +666,7 @@ def docente_test():
 @login_required
 @role_required(['docente'])
 def docente_iscrizioni_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     
     # Verifica che il corso appartenga al docente
     if corso.docente_id != current_user.id:
@@ -616,7 +684,7 @@ def aggiorna_ore():
         iscrizione_id = request.form.get('iscrizione_id')
         ore_frequentate = float(request.form.get('ore_frequentate'))
         
-        iscrizione = Iscrizione.query.get_or_404(iscrizione_id)
+        iscrizione = Iscrizione.query.filter_by(id=iscrizione_id).first_or_404()
         
         # Verifica che il corso appartenga al docente
         if iscrizione.corso.docente_id != current_user.id:
@@ -637,7 +705,7 @@ def valuta_test():
         risultato_id = request.form.get('risultato_id')
         punteggio = float(request.form.get('punteggio'))
         
-        risultato = RisultatoTest.query.get_or_404(risultato_id)
+        risultato = RisultatoTest.query.filter_by(id=risultato_id).first_or_404()
         
         # Verifica che il test appartenga a un corso del docente
         if risultato.test.corso.docente_id != current_user.id:
@@ -662,7 +730,7 @@ def discente_corsi():
 @login_required
 @role_required(['discente'])
 def discente_dettaglio_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     iscrizione = Iscrizione.query.filter_by(
         discente_id=current_user.id,
         corso_id=corso_id
@@ -684,7 +752,7 @@ def discente_dettaglio_corso(corso_id):
 @login_required
 @role_required(['discente'])
 def discente_test(test_id):
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verifica che il discente sia iscritto al corso
     iscrizione = Iscrizione.query.filter_by(
@@ -719,7 +787,7 @@ def discente_attestati():
 @login_required
 @role_required(['discente'])
 def scarica_attestato(attestato_id):
-    attestato = Attestato.query.get_or_404(attestato_id)
+    attestato = Attestato.query.filter_by(id=attestato_id).first_or_404()
     
     # Verifica che l'attestato appartenga al discente
     if attestato.iscrizione.discente_id != current_user.id:
@@ -1089,10 +1157,78 @@ def carica_risultati_test():
         file = request.files.get('file_excel')
         
         if file and file.filename:
-            # Qui andrebbe implementata la logica per leggere il file Excel
-            # e caricare i risultati nel database
+            # Verifica che il file sia in formato Excel
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                flash('Il file deve essere in formato Excel (.xlsx o .xls)', 'danger')
+                if current_user.role == 'admin':
+                    return redirect(url_for('admin_test'))
+                else:
+                    return redirect(url_for('docente_test'))
             
-            flash('Risultati caricati con successo!', 'success')
+            # Salva temporaneamente il file
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join('uploads', 'temp', filename)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            file.save(temp_path)
+            
+            try:
+                # Leggi il file Excel con pandas
+                import pandas as pd
+                df = pd.read_excel(temp_path)
+                
+                # Usa le colonne specifiche indicate dall'utente
+                # Colonna F (5) = Total points, Colonna U (20) = Indirizzo Email
+                # Colonna I (8) = Nome, Colonna L (11) = Cognome
+                # Colonna O (14) = Comune di appartenenza, Colonna R (17) = Poit
+                
+                # Verifica che ci siano abbastanza colonne nel file
+                if len(df.columns) < 21:  # Colonna U è indice 20
+                    flash(f'Il file Excel non contiene tutte le colonne necessarie. Sono richieste almeno 21 colonne.', 'danger')
+                    os.remove(temp_path)  # Rimuovi il file temporaneo
+                    if current_user.role == 'admin':
+                        return redirect(url_for('admin_test'))
+                    else:
+                        return redirect(url_for('docente_test'))
+                
+                # Ottieni il corso associato al test
+                test = Test.query.filter_by(id=test_id).first_or_404()
+                corso_id = test.corso_id
+                
+                # Processa ogni riga
+                results_count = 0
+                for _, row in df.iterrows():
+                    # Estrai i dati dalle colonne specifiche
+                    # Nota: in pandas, le colonne sono 0-indexed, quindi F è 5, I è 8, ecc.
+                    try:
+                        total_points = str(row.iloc[5]).strip() if len(row) > 5 else ''
+                        nome = str(row.iloc[8]).strip() if len(row) > 8 else ''
+                        cognome = str(row.iloc[11]).strip() if len(row) > 11 else ''
+                        comune = str(row.iloc[14]).strip() if len(row) > 14 else ''
+                        email = str(row.iloc[20]).strip() if len(row) > 20 else ''
+                        
+                        # Usa total_points come punteggio
+                        score_text = total_points
+                    except Exception as e:
+                        print(f"Errore nell'estrazione dei dati dalla riga: {str(e)}")
+                        continue
+                    
+                    # Salta righe con email o punteggio vuoti
+                    if not email or email == 'nan' or not score_text or score_text == 'nan':
+                        continue
+                    
+                    # Processa il risultato
+                    from run import process_test_result
+                    results_count += process_test_result(email, score_text, test_id, corso_id)
+                
+                db.session.commit()
+                flash(f'Importati {results_count} risultati dal file Excel', 'success')
+                
+            except Exception as e:
+                flash(f'Errore durante l'elaborazione del file Excel: {str(e)}', 'danger')
+            finally:
+                # Rimuovi il file temporaneo
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
         else:
             flash('Nessun file selezionato!', 'danger')
         
@@ -1187,7 +1323,7 @@ def docente_test():
 @login_required
 @role_required(['docente'])
 def docente_iscrizioni_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     
     # Verifica che il corso appartenga al docente
     if corso.docente_id != current_user.id:
@@ -1205,7 +1341,7 @@ def aggiorna_ore():
         iscrizione_id = request.form.get('iscrizione_id')
         ore_frequentate = float(request.form.get('ore_frequentate'))
         
-        iscrizione = Iscrizione.query.get_or_404(iscrizione_id)
+        iscrizione = Iscrizione.query.filter_by(id=iscrizione_id).first_or_404()
         
         # Verifica che il corso appartenga al docente
         if iscrizione.corso.docente_id != current_user.id:
@@ -1226,7 +1362,7 @@ def valuta_test():
         risultato_id = request.form.get('risultato_id')
         punteggio = float(request.form.get('punteggio'))
         
-        risultato = RisultatoTest.query.get_or_404(risultato_id)
+        risultato = RisultatoTest.query.filter_by(id=risultato_id).first_or_404()
         
         # Verifica che il test appartenga a un corso del docente
         if risultato.test.corso.docente_id != current_user.id:
@@ -1251,7 +1387,7 @@ def discente_corsi():
 @login_required
 @role_required(['discente'])
 def discente_dettaglio_corso(corso_id):
-    corso = Corso.query.get_or_404(corso_id)
+    corso = Corso.query.filter_by(id=corso_id).first_or_404()
     iscrizione = Iscrizione.query.filter_by(
         discente_id=current_user.id,
         corso_id=corso_id
@@ -1273,7 +1409,7 @@ def discente_dettaglio_corso(corso_id):
 @login_required
 @role_required(['discente'])
 def discente_test(test_id):
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verifica che il discente sia iscritto al corso
     iscrizione = Iscrizione.query.filter_by(
@@ -1308,7 +1444,7 @@ def discente_attestati():
 @login_required
 @role_required(['discente'])
 def scarica_attestato(attestato_id):
-    attestato = Attestato.query.get_or_404(attestato_id)
+    attestato = Attestato.query.filter_by(id=attestato_id).first_or_404()
     
     # Verifica che l'attestato appartenga al discente
     if attestato.iscrizione.discente_id != current_user.id:

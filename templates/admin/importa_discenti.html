@@ -22,6 +22,16 @@
             </div>
             
             <div class="mb-3">
+                <label for="progetto_id" class="form-label">Progetto</label>
+                <select class="form-select" id="progetto_id" name="progetto_id" required>
+                    {% for progetto in progetti %}
+                    <option value="{{ progetto.id }}">{{ progetto.titolo }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">Seleziona il progetto a cui associare i discenti importati.</div>
+            </div>
+            
+            <div class="mb-3">
                 <label for="password_default" class="form-label">Password predefinita</label>
                 <input type="text" class="form-control" id="password_default" name="password_default" value="Password123">
                 <div class="form-text">Questa password sarà assegnata a tutti i nuovi discenti.</div>

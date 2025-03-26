@@ -12,27 +12,21 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" class="needs-validation" novalidate>
-            <div class="mb-3">
+        <form method="POST" action="{{ url_for('admin_nuovo_docente') }}">
+            <!-- Add this line to include the CSRF token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
                 <label for="nome" class="form-label">Nome</label>
                 <input type="text" class="form-control" id="nome" name="nome" required>
-                <div class="invalid-feedback">
-                    Inserisci il nome del docente
-                </div>
             </div>
-            <div class="mb-3">
+            <div class="form-group">
                 <label for="cognome" class="form-label">Cognome</label>
                 <input type="text" class="form-control" id="cognome" name="cognome" required>
-                <div class="invalid-feedback">
-                    Inserisci il cognome del docente
-                </div>
             </div>
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
+            <div class="form-group">
+                <label for="username">Username</label>
                 <input type="text" class="form-control" id="username" name="username" required>
-                <div class="invalid-feedback">
-                    Inserisci uno username
-                </div>
             </div>
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>

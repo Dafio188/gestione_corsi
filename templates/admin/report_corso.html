@@ -47,14 +47,9 @@
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <form action="{{ url_for('admin_report_export_pdf') }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="tipo_report" value="corso">
-                        <input type="hidden" name="id_elemento" value="{{ corso.id }}">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-file-pdf"></i> Esporta in PDF
-                        </button>
-                    </form>
+                    <button onclick="exportReportPDF('corso', {{ corso.id }})" class="btn btn-danger">
+                        <i class="bi bi-file-pdf"></i> Esporta in PDF
+                    </button>
                 </div>
             </div>
         </div>
@@ -75,6 +70,11 @@
                                 <th>Email</th>
                                 <th>Ore Frequentate</th>
                                 <th>Completato</th>
+                                {% if tests %}
+                                    {% for test in tests %}
+                                        <th>{{ test.tipo|capitalize }} - {{ test.titolo }}</th>
+                                    {% endfor %}
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -103,6 +103,19 @@
                                             <span class="badge bg-warning">No</span>
                                         {% endif %}
                                     </td>
+                                    {% if tests %}
+                                        {% for test in tests %}
+                                            <td>
+                                                {% if risultati_test[iscrizione.id][test.id] %}
+                                                    <span class="badge {% if risultati_test[iscrizione.id][test.id].superato %}bg-success{% else %}bg-danger{% endif %}">
+                                                        {{ risultati_test[iscrizione.id][test.id].punteggio }}%
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Non sostenuto</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                    {% endif %}
                                 </tr>
                             {% endfor %}
                         </tbody>

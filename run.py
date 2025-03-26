@@ -20,7 +20,7 @@ import string
 import xlsxwriter
 from extensions import db  # Import db from extensions
 from routes import progetti
-from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato  # Import all models
+from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato, Progetto, Nota  # Import all models
 
 # Define allowed file extensions
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'}
@@ -415,7 +415,7 @@ def admin_nuova_iscrizione():
 @login_required
 @role_required(['admin'])
 def admin_modifica_utente(utente_id):
-    utente = User.query.get_or_404(utente_id)
+    utente = User.query.filter_by(id=utente_id).first_or_404()
     progetti = Progetto.query.all()
     
     if request.method == 'POST':
@@ -471,7 +471,7 @@ def admin_modifica_utente(utente_id):
 @login_required
 @role_required(['admin'])
 def admin_elimina_utente(utente_id):
-    utente = User.query.get_or_404(utente_id)
+    utente = User.query.filter_by(id=utente_id).first_or_404()
     
     # Non permettere l'eliminazione dell'utente corrente
     if utente.id == current_user.id:
@@ -536,76 +536,79 @@ def admin_elimina_utente(utente_id):
 @login_required
 @role_required(['admin'])
 def admin_nuovo_corso():
-    if request.method == 'POST':
-        titolo = request.form.get('titolo')
-        descrizione = request.form.get('descrizione')
-        ore_totali = float(request.form.get('ore_totali'))
-        data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
-        data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
-        progetto_id = request.form.get('progetto_id')
-        progetto_riferimento = request.form.get('progetto_riferimento')
-        
-        # Add error handling for docente_id
-        docente_id_raw = request.form.get('docente_id')
-        if not docente_id_raw:
-            flash('Seleziona un docente', 'danger')
-            docenti = User.query.filter_by(role='docente').all()
-            progetti = Progetto.query.all()
-            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
-        
-        docente_id = int(docente_id_raw)
-        
-        # Get modalita and related fields
-        modalita = request.form.get('modalita', 'in_house')
-        indirizzo = request.form.get('indirizzo')
-        link_webinar = request.form.get('link_webinar')
-        piattaforma = request.form.get('piattaforma')  # Add this line
-        orario = request.form.get('orario')
-
-        # Validate modalita-specific fields
-        if modalita == 'in_house' and not indirizzo:
-            flash('Per la modalità in-house è necessario specificare l\'indirizzo', 'danger')
-            docenti = User.query.filter_by(role='docente').all()
-            progetti = Progetto.query.all()
-            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
-        
-        if modalita == 'webinar' and not link_webinar:
-            flash('Per la modalità webinar è necessario specificare il link', 'danger')
-            docenti = User.query.filter_by(role='docente').all()
-            progetti = Progetto.query.all()
-            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
-            
-        if modalita == 'e_learning' and not piattaforma:  # Add this validation
-            flash('Per la modalità e-learning è necessario specificare la piattaforma', 'danger')
-            docenti = User.query.filter_by(role='docente').all()
-            progetti = Progetto.query.all()
-            return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
-
-        corso = Corso(
-            titolo=titolo,
-            descrizione=descrizione,
-            ore_totali=ore_totali,
-            data_inizio=data_inizio,
-            data_fine=data_fine,
-            progetto_riferimento=progetto_riferimento,
-            progetto_id=progetto_id,
-            docente_id=docente_id,
-            modalita=modalita,
-            indirizzo=indirizzo,
-            link_webinar=link_webinar,
-            piattaforma=piattaforma,  # Add this line
-            orario=orario
-        )
-        
-        db.session.add(corso)
-        db.session.commit()
-        
-        flash('Corso creato con successo', 'success')
-        return redirect(url_for('admin_corsi'))
-    
+    # Get all docenti and progetti for the form
     docenti = User.query.filter_by(role='docente').all()
     progetti = Progetto.query.all()
+    
+    if request.method == 'POST':
+        # Get form data
+        titolo = request.form.get('titolo')
+        docente_id = request.form.get('docente_id')
+        data_inizio = request.form.get('data_inizio')
+        data_fine = request.form.get('data_fine')
+        ore_totali = request.form.get('ore_totali')
+        progetto_id = request.form.get('progetto_id')
+        descrizione = request.form.get('descrizione')
+        modalita = request.form.get('modalita')
+        link_webinar = request.form.get('link_webinar')
+        
+        # Validate webinar link if modalita is webinar or misto
+        if modalita in ['webinar', 'misto']:
+            if not link_webinar:
+                flash('Per la modalità webinar è necessario specificare il link', 'danger')
+                return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+            
+            # Ensure the link starts with http:// or https://
+            if not (link_webinar.startswith('http://') or link_webinar.startswith('https://')):
+                link_webinar = 'https://' + link_webinar
+        else:
+            link_webinar = None
+        
+        # Handle file upload if present
+        materiale_path = None
+        if 'materiale' in request.files and request.files['materiale'].filename:
+            file = request.files['materiale']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                # Create a unique filename to avoid collisions
+                unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'materiale', unique_filename)
+                
+                # Ensure the directory exists
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                
+                file.save(file_path)
+                materiale_path = f"materiale/{unique_filename}"
+        
+        # Create new corso
+        try:
+            nuovo_corso = Corso(
+                titolo=titolo,
+                docente_id=docente_id,
+                data_inizio=datetime.strptime(data_inizio, '%Y-%m-%d').date(),
+                data_fine=datetime.strptime(data_fine, '%Y-%m-%d').date(),
+                ore_totali=ore_totali,
+                progetto_id=progetto_id,
+                descrizione=descrizione,
+                modalita=modalita,
+                link_webinar=link_webinar,
+                materiale=materiale_path
+            )
+            
+            db.session.add(nuovo_corso)
+            db.session.commit()
+            
+            flash('Corso creato con successo', 'success')
+            return redirect(url_for('admin_corsi'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Errore durante la creazione del corso: {str(e)}', 'danger')
+    
     return render_template('admin/nuovo_corso.html', docenti=docenti, progetti=progetti)
+
+# Helper function to check if file extension is allowed
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/admin/corsi/<int:corso_id>/modifica', methods=['GET', 'POST'])
 @login_required
@@ -692,7 +695,7 @@ def docente_modifica_iscrizione(corso_id, iscrizione_id):
     corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
     
     # Get the enrollment
-    iscrizione = Iscrizione.query.get_or_404(iscrizione_id)
+    iscrizione = Iscrizione.query.filter_by(id=iscrizione_id).first_or_404()
     
     # Verify that the enrollment belongs to the course
     if iscrizione.corso_id != corso_id:
@@ -756,7 +759,7 @@ def docente_modifica_test(corso_id, test_id):
     corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
     
     # Get the test
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verify that the test belongs to the course
     if test.corso_id != corso_id:
@@ -794,7 +797,7 @@ def docente_elimina_test(corso_id, test_id):
     corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
     
     # Get the test
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verify that the test belongs to the course
     if test.corso_id != corso_id:
@@ -820,7 +823,7 @@ def docente_dettaglio_test(corso_id, test_id):
     corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
     
     # Get the test
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verify that the test belongs to the course
     if test.corso_id != corso_id:
@@ -854,7 +857,7 @@ def docente_salva_risultati_test(corso_id, test_id):
     corso = Corso.query.filter_by(id=corso_id, docente_id=current_user.id).first_or_404()
     
     # Get the test
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Verify that the test belongs to the course
     if test.corso_id != corso_id:
@@ -1275,13 +1278,6 @@ def admin_elimina_iscrizione(corso_id, iscrizione_id):
     flash('Iscrizione eliminata con successo', 'success')
     return redirect(url_for('admin_dettaglio_corso', corso_id=corso_id))
 
-# Rotte per gestione test
-@app.route('/admin/test')
-@login_required
-@role_required(['admin'])
-def admin_test():
-    test = Test.query.all()
-    return render_template('admin/test.html', test=test)
 
 @app.route('/admin/test/nuovo', methods=['GET', 'POST'])
 @login_required
@@ -1327,7 +1323,7 @@ def admin_nuovo_test():
 @login_required
 @role_required(['admin'])
 def admin_modifica_test(test_id):
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     corsi = Corso.query.all()
     
     if request.method == 'POST':
@@ -1360,7 +1356,7 @@ def admin_modifica_test(test_id):
 @login_required
 @role_required(['admin'])
 def admin_elimina_test(test_id):
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Delete all test results associated with this test
     risultati = RisultatoTest.query.filter_by(test_id=test_id).all()
@@ -1378,8 +1374,8 @@ def admin_elimina_test(test_id):
 @login_required
 @role_required(['admin'])
 def admin_test_risultati(test_id):
-    test = Test.query.get_or_404(test_id)
-    corso = Corso.query.get(test.corso_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
+    corso = db.session.get(Corso, test.corso_id)
     iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
     
     if request.method == 'POST':
@@ -1388,7 +1384,14 @@ def admin_test_risultati(test_id):
             superato_key = f'superato_{iscrizione.id}'
             
             if punteggio_key in request.form:
-                punteggio = float(request.form.get(punteggio_key, 0))
+                punteggio_value = request.form.get(punteggio_key, '')
+                
+                # Handle empty string or invalid input
+                try:
+                    punteggio = float(punteggio_value) if punteggio_value.strip() else 0
+                except ValueError:
+                    punteggio = 0
+                    
                 superato = superato_key in request.form
                 
                 # Check if result already exists
@@ -1432,7 +1435,348 @@ def admin_test_risultati(test_id):
                           iscrizioni=iscrizioni,
                           risultati=risultati)
 
-# Rotte per gestione attestati
+# Add this helper function to process test results
+def process_test_result(email, score_text, test_id, corso_id):
+    """Process a single test result row"""
+    # Try to convert score to float
+    try:
+        # Handle different formats (e.g., "80%", "8/10", or just "8")
+        score_text = str(score_text).strip()
+        if not score_text:
+            return 0  # Skip empty scores
+            
+        if '%' in score_text:
+            # Format: "80%"
+            score = float(score_text.replace('%', ''))
+        elif '/' in score_text:
+            # Format: "8/10"
+            num, den = score_text.split('/')
+            score = (float(num.strip()) / float(den.strip())) * 100
+        else:
+            # Try to convert directly to float
+            score_value = float(score_text)
+            
+            # If the score is less than 1, it might be a fraction (e.g., 0.8 for 80%)
+            if score_value <= 1:
+                score = score_value * 100
+            else:
+                score = score_value
+    except ValueError as e:
+        print(f"Error converting score '{score_text}' for email '{email}': {str(e)}")
+        return 0  # Skip if score can't be converted
+    
+    # Find the user by email
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        print(f"User not found with email: {email}")
+        return 0  # Skip if user not found
+    
+    # Find the iscrizione for this user
+    iscrizione = Iscrizione.query.filter_by(
+        corso_id=corso_id,
+        discente_id=user.id
+    ).first()
+    
+    if not iscrizione:
+        print(f"Iscrizione not found for user {user.id} in corso {corso_id}")
+        return 0  # Skip if iscrizione not found
+    
+    # Check if result already exists
+    risultato = RisultatoTest.query.filter_by(
+        test_id=test_id,
+        iscrizione_id=iscrizione.id
+    ).first()
+    
+    # Determine if test is passed (85% or higher)
+    superato = score >= 85
+    
+    if risultato:
+        # Update existing result
+        risultato.punteggio = score
+        risultato.superato = superato
+    else:
+        # Create new result
+        risultato = RisultatoTest(
+            test_id=test_id,
+            iscrizione_id=iscrizione.id,
+            punteggio=score,
+            superato=superato
+        )
+        db.session.add(risultato)
+    
+    return 1  # Count this as a successful import
+
+# Rotte per gestione test
+@app.route('/admin/test')
+@login_required
+@role_required(['admin'])
+def admin_test():
+    test = Test.query.all()
+    return render_template('admin/test.html', test=test)
+
+# Rotta per la pagina di caricamento dei risultati da Excel
+@app.route('/admin/test/<int:test_id>/carica-risultati', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin', 'docente'])
+def admin_carica_risultati(test_id):
+    test = Test.query.filter_by(id=test_id).first_or_404()
+    corso = db.session.get(Corso, test.corso_id)
+    
+    if request.method == 'POST':
+        file = request.files.get('file_excel')
+        
+        if file and file.filename:
+            # Verifica che il file sia in formato Excel
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                flash('Il file deve essere in formato Excel (.xlsx o .xls)', 'danger')
+                return redirect(url_for('admin_test_risultati', test_id=test_id))
+            
+            # Salva temporaneamente il file
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join('uploads', 'temp', filename)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            file.save(temp_path)
+            
+            try:
+                # Leggi il file Excel con pandas
+                import pandas as pd
+                df = pd.read_excel(temp_path)
+                
+                # Processa i dati del file Excel
+                # Colonne specifiche da utilizzare
+                # F: Total points (punteggio) - indice 5
+                # I: Nome - indice 8
+                # L: Cognome - indice 11
+                # O: Comune di appartenenza - indice 14
+                # R: Indirizzo Email - indice 17
+                
+                if len(df.columns) < 18:  # Colonna R è indice 17
+                    flash(f'Il file Excel non contiene tutte le colonne necessarie. Sono richieste almeno 18 colonne.', 'danger')
+                    os.remove(temp_path)  # Rimuovi il file temporaneo
+                    if current_user.role == 'admin':
+                        return redirect(url_for('admin_test'))
+                    else:
+                        return redirect(url_for('docente_test'))
+                
+                # Ottieni tutti i discenti iscritti al corso
+                iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+                discenti_emails = {iscrizione.discente.email.lower(): iscrizione.discente for iscrizione in iscrizioni}
+                
+                risultati_salvati = 0
+                errori = 0
+                
+                for _, row in df.iterrows():
+                    try:
+                        # Estrai i dati dalle colonne specifiche
+                        if len(row) > 17:  # Assicurati che ci siano abbastanza colonne
+                            punteggio = row.iloc[5] if pd.notna(row.iloc[5]) else 0
+                            email = str(row.iloc[17]).strip().lower() if pd.notna(row.iloc[17]) else ''
+                            
+                            # Verifica se l'email esiste nel sistema
+                            if email in discenti_emails:
+                                discente = discenti_emails[email]
+                                
+                                # Verifica se esiste già un risultato per questo test e iscrizione
+                                iscrizione = Iscrizione.query.filter_by(
+                                    corso_id=corso.id,
+                                    discente_id=discente.id
+                                ).first()
+                                
+                                if not iscrizione:
+                                    print(f"Iscrizione non trovata per il discente {discente.email} nel corso {corso.id}")
+                                    continue
+                                    
+                                risultato_esistente = RisultatoTest.query.filter_by(
+                                    test_id=test_id,
+                                    iscrizione_id=iscrizione.id
+                                ).first()
+                                
+                                # Determina se il test è superato (punteggio >= 60%)
+                                superato = float(punteggio) >= 60.0
+                                
+                                if risultato_esistente:
+                                    # Aggiorna il risultato esistente
+                                    risultato_esistente.punteggio = float(punteggio)
+                                    risultato_esistente.superato = superato
+                                    risultato_esistente.data_completamento = datetime.now()
+                                else:
+                                    # Crea un nuovo risultato
+                                    nuovo_risultato = RisultatoTest(
+                                        test_id=test_id,
+                                        iscrizione_id=iscrizione.id,
+                                        punteggio=float(punteggio),
+                                        superato=superato,
+                                        data_completamento=datetime.now()
+                                    )
+                                    db.session.add(nuovo_risultato)
+                                
+                                risultati_salvati += 1
+                    except Exception as e:
+                        print(f"Errore nell'elaborazione della riga: {str(e)}")
+                        errori += 1
+                
+                # Commit delle modifiche al database
+                db.session.commit()
+                
+                if risultati_salvati > 0:
+                    flash(f'Risultati caricati con successo! {risultati_salvati} risultati importati.', 'success')
+                else:
+                    flash('Nessun risultato è stato importato. Verifica che le email nel file corrispondano a discenti iscritti al corso.', 'warning')
+                
+                if errori > 0:
+                    flash(f'Ci sono stati {errori} errori durante l\'importazione. Controlla il formato del file.', 'warning')
+                
+            except Exception as e:
+                flash(f'Errore durante l\'elaborazione del file: {str(e)}', 'danger')
+            finally:
+                # Rimuovi il file temporaneo
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+        else:
+            flash('Nessun file selezionato!', 'danger')
+        
+        return redirect(url_for('admin_test_risultati', test_id=test_id))
+    
+    return render_template('admin/carica_risultati_test.html', test=test, corso=corso)
+
+# Rotta per l'importazione dei risultati da Microsoft Forms
+@app.route('/admin/test/<int:test_id>/import-forms', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_import_forms_results(test_id):
+    test = Test.query.filter_by(id=test_id).first_or_404()
+    corso = db.session.get(Corso, test.corso_id)
+    iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
+    
+    if request.method == 'POST':
+        try:
+            import_method = request.form.get('import_method', 'paste')
+            
+            if import_method == 'paste':
+                # Get the forms data from the textarea
+                forms_data = request.form.get('forms_data')
+                
+                # Parse the CSV data (assuming it's copied from Excel/Forms export)
+                import csv
+                from io import StringIO
+                
+                csv_data = StringIO(forms_data)
+                reader = csv.reader(csv_data)
+                
+                # Skip header row
+                headers = next(reader)
+                
+                # Find the columns for email and score
+                email_col = None
+                score_col = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = str(header).lower()
+                    if 'email' in header_lower or 'posta elettronica' in header_lower:
+                        email_col = i
+                    if any(term in header_lower for term in ['punteggio', 'score', 'risultato', 'total points', 'total', 'points']):
+                        score_col = i
+                
+                if email_col is None or score_col is None:
+                    flash(f'Impossibile trovare le colonne per email e punteggio nei dati forniti. Colonne trovate: {", ".join(headers)}', 'danger')
+                    return redirect(url_for('admin_import_forms_results', test_id=test_id))
+                
+                # Process each row
+                results_count = 0
+                for row in reader:
+                    if len(row) <= max(email_col, score_col):
+                        continue  # Skip incomplete rows
+                    
+                    email = row[email_col].strip()
+                    score_text = row[score_col].strip()
+                    
+                    # Process the score and user data
+                    results_count += process_test_result(email, score_text, test_id, corso.id)
+                
+                db.session.commit()
+                flash(f'Importati {results_count} risultati da Microsoft Forms', 'success')
+                
+            elif import_method == 'excel':
+                # Get the uploaded Excel file
+                excel_file = request.files.get('excel_file')
+                
+                if not excel_file or not excel_file.filename:
+                    flash('Nessun file Excel caricato', 'danger')
+                    return redirect(url_for('admin_import_forms_results', test_id=test_id))
+                
+                # Check file extension
+                if not excel_file.filename.endswith(('.xlsx', '.xls')):
+                    flash('Il file deve essere in formato Excel (.xlsx o .xls)', 'danger')
+                    return redirect(url_for('admin_import_forms_results', test_id=test_id))
+                
+                # Process the Excel file
+                import pandas as pd
+                
+                # Read the Excel file
+                df = pd.read_excel(excel_file)
+                
+                # Print all columns for debugging
+                print("Available columns:", df.columns.tolist())
+                
+                # Find the columns for email and score
+                email_col = None
+                score_col = None
+                
+                for col in df.columns:
+                    col_lower = str(col).lower()
+                    if 'email' in col_lower or 'posta elettronica' in col_lower:
+                        email_col = col
+                        print(f"Found email column: {col}")
+                    if any(term in col_lower for term in ['punteggio', 'score', 'risultato', 'total points', 'total', 'points']):
+                        score_col = col
+                        print(f"Found score column: {col}")
+                
+                if email_col is None or score_col is None:
+                    flash(f'Impossibile trovare le colonne per email e punteggio nel file Excel. Colonne trovate: {", ".join(str(c) for c in df.columns)}', 'danger')
+                    return redirect(url_for('admin_import_forms_results', test_id=test_id))
+                
+                # Process each row
+                results_count = 0
+                for _, row in df.iterrows():
+                    email = str(row[email_col]).strip()
+                    score_text = str(row[score_col]).strip()
+                    
+                    # Skip rows with empty email or score
+                    if not email or email == 'nan' or not score_text or score_text == 'nan':
+                        continue
+                    
+                    # Debug print
+                    print(f"Processing: Email={email}, Score={score_text}")
+                    
+                    # Process the score and user data
+                    results_count += process_test_result(email, score_text, test_id, corso.id)
+                
+                db.session.commit()
+                flash(f'Importati {results_count} risultati dal file Excel', 'success')
+                
+            elif import_method == 'link':
+                # Get the forms link
+                forms_link = request.form.get('forms_link')
+                
+                if not forms_link:
+                    flash('Inserisci un link valido di Microsoft Forms', 'danger')
+                    return redirect(url_for('admin_import_forms_results', test_id=test_id))
+                
+                # Store the link in the test record for future use
+                test.forms_link = forms_link
+                db.session.commit()
+                
+                flash('Link salvato. Nota: l\'importazione diretta da link non è ancora supportata. Usa il metodo copia-incolla o carica un file Excel.', 'info')
+            
+            return redirect(url_for('admin_test_risultati', test_id=test_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Errore durante l\'importazione: {str(e)}', 'danger')
+    
+    return render_template('admin/import_forms_results.html', test=test, corso=corso)
+    
+   # Rotte per gestione attestati
 @app.route('/admin/attestati')
 @login_required
 @role_required(['admin'])
@@ -1441,10 +1785,10 @@ def admin_attestati():
     
     # Get related data for each attestato
     for attestato in attestati:
-        attestato.iscrizione = Iscrizione.query.get(attestato.iscrizione_id)
+        attestato.iscrizione = db.session.get(Iscrizione, attestato.iscrizione_id)
         if attestato.iscrizione:
-            attestato.discente = User.query.get(attestato.iscrizione.discente_id)
-            attestato.corso = Corso.query.get(attestato.iscrizione.corso_id)
+            attestato.discente = db.session.get(User, attestato.iscrizione.discente_id)
+            attestato.corso = db.session.get(Corso, attestato.iscrizione.corso_id)
     
     return render_template('admin/attestati.html', attestati=attestati)
 
@@ -1554,108 +1898,104 @@ def admin_nuovo_attestato():
         
     return render_template('admin/nuovo_attestato.html', iscrizioni=iscrizioni)
 
-@app.route('/admin/attestati/genera/<int:iscrizione_id>', methods=['GET', 'POST'])
-@login_required
-def generate_attestato_pdf(file_path, nome, cognome, codice_fiscale, comune, corso_titolo, ore_corso, valutazione, progetto_titolo, modalita=None):
-    """Generate a PDF attestato with background image and participant data"""
+# Add this function before the admin_genera_attestati_automatici route
+def generate_attestato_pdf(file_path, nome, cognome, codice_fiscale, unita_org, titolo_corso, ore_frequentate, valutazione, progetto, modalita):
+    """
+    Generate a PDF certificate (attestato) with the provided information.
     
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    
-    # Create a PDF with ReportLab
+    Args:
+        file_path: Where to save the PDF file
+        nome: First name of the student
+        cognome: Last name of the student
+        codice_fiscale: Tax code of the student
+        unita_org: Organizational unit of the student
+        titolo_corso: Course title
+        ore_frequentate: Hours attended (format: "X/Y")
+        valutazione: Evaluation score (format: "X/100")
+        progetto: Project name
+        modalita: Course modality
+    """
+    # Create a BytesIO buffer to receive PDF data
     buffer = BytesIO()
     
-    # Use A4 landscape
-    width, height = A4[1], A4[0]  # Swap dimensions for landscape
+    # Create the PDF object, using the BytesIO buffer as its "file"
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=A4,
+        rightMargin=72, 
+        leftMargin=72,
+        topMargin=72, 
+        bottomMargin=72
+    )
     
-    # Create the PDF document
-    c = canvas.Canvas(buffer, pagesize=(width, height))
+    # Container for the 'Flowable' objects
+    elements = []
     
-    # Add a background image if available
-    background_path = os.path.join(app.root_path, 'static', 'img', 'attestato_background.jpg')
-    if os.path.exists(background_path):
-        c.drawImage(background_path, 0, 0, width, height)
+    # Define styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Title']
+    title_style.alignment = 1  # Center alignment
     
-    # Set font and size for title
-    c.setFont("Helvetica-Bold", 24)
-    c.drawCentredString(width/2, height-100, "ATTESTATO DI PARTECIPAZIONE")
+    normal_style = styles['Normal']
+    normal_style.alignment = 1  # Center alignment
     
-    # Set font and size for content
-    c.setFont("Helvetica", 14)
+    # Add title
+    title = Paragraph(f"ATTESTATO DI PARTECIPAZIONE", title_style)
+    elements.append(title)
+    elements.append(Paragraph("<br/><br/>", normal_style))
     
-    # Add current date
+    # Add certificate text
+    elements.append(Paragraph(f"Si attesta che", normal_style))
+    elements.append(Paragraph("<br/>", normal_style))
+    elements.append(Paragraph(f"<b>{nome} {cognome}</b>", title_style))
+    elements.append(Paragraph(f"Codice Fiscale: {codice_fiscale}", normal_style))
+    elements.append(Paragraph(f"Unità Organizzativa: {unita_org}", normal_style))
+    elements.append(Paragraph("<br/>", normal_style))
+    elements.append(Paragraph(f"ha partecipato al corso", normal_style))
+    elements.append(Paragraph("<br/>", normal_style))
+    elements.append(Paragraph(f"<b>\"{titolo_corso}\"</b>", title_style))
+    elements.append(Paragraph("<br/>", normal_style))
+    
+    # Add course details
+    if progetto and progetto != "N/A":
+        elements.append(Paragraph(f"nell'ambito del progetto <b>{progetto}</b>", normal_style))
+    
+    elements.append(Paragraph("<br/>", normal_style))
+    elements.append(Paragraph(f"Modalità: <b>{modalita}</b>", normal_style))
+    elements.append(Paragraph("<br/>", normal_style))
+    
+    # Add attendance and evaluation
+    elements.append(Paragraph(f"per un totale di <b>{ore_frequentate}</b> ore complessive", normal_style))
+    elements.append(Paragraph(f"con valutazione finale: <b>{valutazione}</b>", normal_style))
+    
+    # Add date and signature
+    elements.append(Paragraph("<br/><br/><br/>", normal_style))
     today = datetime.now().strftime("%d/%m/%Y")
-    c.drawRightString(width-50, height-150, f"Data: {today}")
+    elements.append(Paragraph(f"Data: {today}", normal_style))
+    elements.append(Paragraph("<br/><br/>", normal_style))
+    elements.append(Paragraph("Il Responsabile del Corso", normal_style))
     
-    # Add participant information
-    y_position = height - 200
-    line_height = 25
+    # Build the PDF
+    doc.build(elements)
     
-    c.drawString(50, y_position, f"Si attesta che:")
-    y_position -= line_height
+    # Get the value of the BytesIO buffer
+    pdf_data = buffer.getvalue()
+    buffer.close()
     
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y_position, f"{nome} {cognome}")
-    y_position -= line_height
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
-    c.setFont("Helvetica", 14)
-    c.drawString(50, y_position, f"Codice Fiscale: {codice_fiscale}")
-    y_position -= line_height
-    
-    c.drawString(50, y_position, f"Comune/Ente: {comune}")
-    y_position -= line_height * 2
-    
-    c.drawString(50, y_position, f"Ha partecipato con successo al corso:")
-    y_position -= line_height
-    
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y_position, f"{corso_titolo}")
-    y_position -= line_height * 2
-    
-    c.setFont("Helvetica", 14)
-    c.drawString(50, y_position, f"Ore di frequenza: {ore_corso}")
-    y_position -= line_height
-    
-    c.drawString(50, y_position, f"Valutazione finale: {valutazione}")
-    y_position -= line_height
-    
-    c.drawString(50, y_position, f"Progetto: {progetto_titolo}")
-    y_position -= line_height
-    
-    # Add modalita if provided
-    if modalita:
-        modalita_text = {
-            'in_house': 'In House',
-            'webinar': 'Webinar',
-            'e_learning': 'E-Learning'
-        }.get(modalita, modalita)
-        
-        c.drawString(50, y_position, f"Modalità: {modalita_text}")
-        y_position -= line_height * 2
-    else:
-        y_position -= line_height
-    
-    # Add signature line
-    c.line(width/2 - 100, y_position, width/2 + 100, y_position)
-    y_position -= 20
-    c.drawCentredString(width/2, y_position, "Firma del responsabile")
-    
-    # Save the PDF
-    c.save()
-    
-    # Get the PDF from the buffer and save it to the file
+    # Save the PDF to a file
     with open(file_path, 'wb') as f:
-        f.write(buffer.getvalue())
+        f.write(pdf_data)
     
     return file_path
-
 # Add this route after the admin_attestati route
-
 @app.route('/admin/attestati/<int:attestato_id>/elimina', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def admin_elimina_attestato(attestato_id):
-    attestato = Attestato.query.get_or_404(attestato_id)
+    attestato = Attestato.query.filter_by(id=attestato_id).first_or_404()
     
     try:
         # Delete the file if it exists
@@ -1683,10 +2023,10 @@ def load_user(user_id):
 @app.route('/download/attestato/<int:attestato_id>')
 @login_required
 def download_attestato(attestato_id):
-    attestato = Attestato.query.get_or_404(attestato_id)
+    attestato = Attestato.query.filter_by(id=attestato_id).first_or_404()
     
     # Check permissions
-    iscrizione = Iscrizione.query.get(attestato.iscrizione_id)
+    iscrizione = db.session.get(Iscrizione, attestato.iscrizione_id)
     if not iscrizione:
         abort(404)
         
@@ -1818,7 +2158,7 @@ def admin_report_progetto():
         flash('Seleziona un progetto', 'danger')
         return redirect(url_for('admin_report'))
         
-    progetto = Progetto.query.get_or_404(progetto_id)
+    progetto = Progetto.query.filter_by(id=progetto_id).first_or_404()
     corsi = Corso.query.filter_by(progetto_id=progetto_id).all()
     return render_template('admin/report_progetto.html', progetto=progetto, corsi=corsi)
 
@@ -1833,7 +2173,26 @@ def admin_report_corso():
         
     corso = Corso.query.get_or_404(corso_id)
     iscrizioni = Iscrizione.query.filter_by(corso_id=corso_id).all()
-    return render_template('admin/report_corso.html', corso=corso, iscrizioni=iscrizioni)
+    
+    # Recupera i test associati al corso
+    tests = Test.query.filter_by(corso_id=corso_id).all()
+    
+    # Crea un dizionario per memorizzare i risultati dei test per ogni iscrizione
+    risultati_test = {}
+    for iscrizione in iscrizioni:
+        risultati_test[iscrizione.id] = {}
+        for test in tests:
+            risultato = RisultatoTest.query.filter_by(
+                test_id=test.id,
+                iscrizione_id=iscrizione.id
+            ).first()
+            risultati_test[iscrizione.id][test.id] = risultato
+    
+    return render_template('admin/report_corso.html', 
+                          corso=corso, 
+                          iscrizioni=iscrizioni, 
+                          tests=tests, 
+                          risultati_test=risultati_test)
 
 
 @app.route('/admin/report/export/excel', methods=['POST'])
@@ -1894,7 +2253,9 @@ def admin_report_export_excel():
     
     elif tipo_report == 'progetto':
         # Report di un singolo progetto e i suoi corsi
-        progetto = Progetto.query.get_or_404(id_elemento)
+        progetto = db.session.get(Progetto, id_elemento)
+        if not progetto:
+            abort(404)
         corsi = Corso.query.filter_by(progetto_id=progetto.id).all()
         
         # Intestazioni progetto
@@ -1913,7 +2274,7 @@ def admin_report_export_excel():
         
         # Dati corsi
         for row, corso in enumerate(corsi, start=4):
-            docente = User.query.get(corso.docente_id)
+            docente = db.session.get(User, corso.docente_id)
             n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
             
             worksheet.write(row, 0, corso.id, cell_format)
@@ -1928,7 +2289,7 @@ def admin_report_export_excel():
     
     elif tipo_report == 'corso':
         # Report di un singolo corso e i suoi discenti
-        corso = Corso.query.get_or_404(id_elemento)
+        corso = Corso.query.filter_by(id=id_elemento).first_or_404()
         iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
         
         # Intestazioni corso
@@ -1940,19 +2301,27 @@ def admin_report_export_excel():
         worksheet.write(1, 4, "Ore Totali:", header_format)
         worksheet.write(1, 5, corso.ore_totali, cell_format)
         
-        docente = User.query.get(corso.docente_id)
+        docente = db.session.get(User, corso.docente_id)
         worksheet.write(2, 0, "Docente:", header_format)
         worksheet.write(2, 1, f"{docente.nome} {docente.cognome}" if docente else "N/D", cell_format)
         
+        # Recupera i test associati al corso
+        tests = Test.query.filter_by(corso_id=corso.id).all()
+        
         # Intestazioni discenti
         headers = ['ID', 'Nome', 'Cognome', 'Email', 'Codice Fiscale', 'Ore Frequentate', 'Progetto']
+        
+        # Aggiungi intestazioni per i test
+        for test in tests:
+            headers.append(f'Test {test.tipo} - {test.titolo}')
+            
         for col, header in enumerate(headers):
             worksheet.write(4, col, header, header_format)
         
         # Dati discenti
         for row, iscrizione in enumerate(iscrizioni, start=5):
-            discente = User.query.get(iscrizione.discente_id)
-            progetto = Progetto.query.get(discente.progetto_id) if discente.progetto_id else None
+            discente = db.session.get(User, iscrizione.discente_id)
+            progetto = db.session.get(Progetto, discente.progetto_id) if discente.progetto_id else None
             
             worksheet.write(row, 0, discente.id, cell_format)
             worksheet.write(row, 1, discente.nome, cell_format)
@@ -1961,6 +2330,19 @@ def admin_report_export_excel():
             worksheet.write(row, 4, discente.codice_fiscale or "N/D", cell_format)
             worksheet.write(row, 5, iscrizione.ore_frequentate, cell_format)
             worksheet.write(row, 6, progetto.titolo if progetto else "N/D", cell_format)
+            
+            # Aggiungi i risultati dei test
+            col_offset = 7
+            for i, test in enumerate(tests):
+                risultato = RisultatoTest.query.filter_by(
+                    test_id=test.id,
+                    iscrizione_id=iscrizione.id
+                ).first()
+                
+                if risultato:
+                    worksheet.write(row, col_offset + i, f"{risultato.punteggio}%", cell_format)
+                else:
+                    worksheet.write(row, col_offset + i, "Non sostenuto", cell_format)
         
         filename = f"report_corso_{corso.id}.xlsx"
     
@@ -1975,7 +2357,7 @@ def admin_report_export_excel():
         
         # Dati
         for row, corso in enumerate(corsi, start=1):
-            docente = User.query.get(corso.docente_id)
+            docente = db.session.get(User, corso.docente_id)
             n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
             
             worksheet.write(row, 0, corso.id, cell_format)
@@ -2063,7 +2445,9 @@ def admin_report_export_pdf():
     
     elif tipo_report == 'progetto':
         # Report di un singolo progetto e i suoi corsi
-        progetto = Progetto.query.get_or_404(id_elemento)
+        progetto = db.session.get(Progetto, id_elemento)
+        if not progetto:
+            abort(404)
         corsi = Corso.query.filter_by(progetto_id=progetto.id).all()
         
         # Titolo e info progetto
@@ -2097,7 +2481,7 @@ def admin_report_export_pdf():
             data_corsi = [['ID', 'Titolo', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']]
             
             for corso in corsi:
-                docente = User.query.get(corso.docente_id)
+                docente = db.session.get(User, corso.docente_id)
                 n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
                 
                 data_corsi.append([
@@ -2129,7 +2513,7 @@ def admin_report_export_pdf():
     
     elif tipo_report == 'corso':
         # Report di un singolo corso e i suoi discenti
-        corso = Corso.query.get_or_404(id_elemento)
+        corso = Corso.query.filter_by(id=id_elemento).first_or_404()
         iscrizioni = Iscrizione.query.filter_by(corso_id=corso.id).all()
         
         # Titolo e info corso
@@ -2137,8 +2521,8 @@ def admin_report_export_pdf():
         elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
         elements.append(Paragraph(" ", normal_style))  # Spazio
         
-        docente = User.query.get(corso.docente_id)
-        progetto = Progetto.query.get(corso.progetto_id) if corso.progetto_id else None
+        docente = db.session.get(User, corso.docente_id)
+        progetto = db.session.get(Progetto, corso.progetto_id) if corso.progetto_id else None
         
         info_corso = [
             ['Data Inizio', corso.data_inizio.strftime('%d/%m/%Y')],
@@ -2168,7 +2552,7 @@ def admin_report_export_pdf():
             data_discenti = [['ID', 'Nome', 'Cognome', 'Email', 'Codice Fiscale', 'Ore Frequentate']]
             
             for iscrizione in iscrizioni:
-                discente = User.query.get(iscrizione.discente_id)
+                discente = db.session.get(User, iscrizione.discente_id)
                 
                 data_discenti.append([
                     str(discente.id),
@@ -2209,7 +2593,7 @@ def admin_report_export_pdf():
         data = [['ID', 'Titolo', 'Ore Totali', 'Data Inizio', 'Data Fine', 'Docente', 'N. Iscritti']]
         
         for corso in corsi:
-            docente = User.query.get(corso.docente_id)
+            docente = db.session.get(User, corso.docente_id)
             n_iscritti = Iscrizione.query.filter_by(corso_id=corso.id).count()
             
             data.append([
@@ -2363,7 +2747,7 @@ def discente_iscrizione_corso(corso_id):
 @role_required(['discente'])
 def discente_visualizza_risultato(test_id):
     # Get the test
-    test = Test.query.get_or_404(test_id)
+    test = Test.query.filter_by(id=test_id).first_or_404()
     
     # Get the enrollment for this course
     iscrizione = Iscrizione.query.filter_by(

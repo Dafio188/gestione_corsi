@@ -44,7 +44,8 @@ def importa_discenti():
                         email=row.get('Email', ''),
                         telefono=row.get('Telefono', ''),
                         ruolo=row.get('Ruolo', ''),
-                        password_hash=''
+                        password_hash='',
+                        progetto_id=request.form.get('progetto_id', 1)  # Usa il progetto selezionato dal form o un valore predefinito
                     )
                     db.session.add(nuovo_discente)
 

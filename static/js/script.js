@@ -73,27 +73,48 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// Example of AJAX request with CSRF token
-function exportReportPDF() {
+// Funzione per esportare report in PDF tramite AJAX
+function exportReportPDF(tipoReport, idElemento) {
+    // Ottieni il token CSRF dal meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    // Crea i dati del form
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('tipo_report', tipoReport);
+    
+    // Aggiungi l'ID dell'elemento se fornito
+    if (idElemento) {
+        formData.append('id_elemento', idElemento);
+    }
+    
+    // Esegui la richiesta POST
     fetch('/admin/report/export/pdf', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRFToken': csrfToken
         },
-        body: JSON.stringify({
-            // your data here
-        })
+        body: formData
     })
-    .then(response => response.blob())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Errore nella richiesta: ' + response.status);
+        }
+        return response.blob();
+    })
     .then(blob => {
+        // Crea un URL per il blob e scarica il file
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'report.pdf';
+        a.download = 'report_' + tipoReport + '.pdf';
         document.body.appendChild(a);
         a.click();
         a.remove();
+        window.URL.revokeObjectURL(url); // Libera la memoria
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Errore durante l\'esportazione del PDF:', error);
+        alert('Si è verificato un errore durante l\'esportazione del PDF. Riprova più tardi.');
+    });
 }

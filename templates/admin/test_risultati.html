@@ -48,6 +48,16 @@
         <div class="card-body">
             <h5 class="card-title">Inserisci Risultati</h5>
             
+            <!-- Add this button near the top of your form -->
+            <a href="{{ url_for('admin_import_forms_results', test_id=test.id) }}" class="btn btn-info mb-3">
+                <i class="fas fa-file-import"></i> Importa da Microsoft Forms
+            </a>
+            
+            <!-- Aggiungi pulsante per importare da Excel -->
+            <a href="{{ url_for('admin_carica_risultati', test_id=test.id) }}" class="btn btn-success mb-3 ml-2">
+                <i class="fas fa-file-excel"></i> Importa da Excel
+            </a>
+            
             <form method="POST" action="{{ url_for('admin_test_risultati', test_id=test.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 

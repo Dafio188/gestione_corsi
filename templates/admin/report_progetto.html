@@ -16,13 +16,9 @@
                 <i class="bi bi-file-earmark-excel"></i> Esporta Excel
             </button>
         </form>
-        <form action="{{ url_for('admin_report_export_pdf') }}" method="POST" class="d-inline ms-2">
-            <input type="hidden" name="tipo_report" value="progetto">
-            <input type="hidden" name="id_elemento" value="{{ progetto.id }}">
-            <button type="submit" class="btn btn-danger">
+        <button onclick="exportReportPDF('progetto', {{ progetto.id }})" class="btn btn-danger d-inline ms-2">
                 <i class="bi bi-file-earmark-pdf"></i> Esporta PDF
             </button>
-        </form>
     </div>
 </div>
 

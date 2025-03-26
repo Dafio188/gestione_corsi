@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky">
+                <h4 class="text-center mt-3">Gestione Corsi</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.dashboard') }}">🏠 Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('progetti.lista_progetti') }}">📌 Progetti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('corsi.lista_corsi') }}">📚 Corsi</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('discenti.lista_discenti') }}">👥 Discenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('test.lista_test') }}">📝 Test</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('attestati.lista_attestati') }}">🎓 Attestati</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report.report_completo') }}">📊 Report Completo</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenuto Principale -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <h2 class="mt-4">Lista Discenti</h2>
+
+            <!-- Header con Pulsanti e Ricerca -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="btn-group">
+                    <!--a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary rounded-pill"-->
+                        <i class="bi bi-house"></i> Torna alla Dashboard
+                    </a>
+                    <a href="{{ url_for('discenti.aggiungi_discente') }}" class="btn btn-success rounded-pill">
+                        <i class="bi bi-person-plus"></i> Aggiungi Discente
+                    </a>
+                </div>
+                <div class="input-group w-50">
+                    <input type="text" id="searchInput" class="form-control rounded-pill" placeholder="Cerca discente..." onkeyup="filterCards()">
+                    <span class="input-group-text rounded-pill"><i class="bi bi-search"></i></span>
+                </div>
+            </div>
+
+            <!-- Filtro per Progetto -->
+            <div class="mb-3">
+                <label for="projectFilter" class="form-label">Filtra per Progetto:</label>
+                <select class="form-select" id="projectFilter" onchange="filterCardsByProject()">
+                    <option value="">Tutti i Progetti</option>
+                    {% for progetto in progetti %}
+                        <option value="{{ progetto.id }}">{{ progetto.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Griglia di Card -->
+            <div class="row" id="discentiGrid">
+                {% for discente in discenti %}
+                <div class="col-md-6 col-lg-4 mb-4" data-progetto="{{ discente.progetto.id if discente.progetto else '' }}">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ discente.nome }} {{ discente.cognome }}</h5>
+                            <p class="card-text">
+                                <strong>Codice Fiscale:</strong> {{ discente.codice_fiscale }}<br>
+                                <strong>Fascia Età:</strong> {{ discente.fascia_eta }}<br>
+                                <strong>Ruolo:</strong> {{ discente.ruolo }}<br>
+                                <strong>Email:</strong> {{ discente.email }}<br>
+                                <strong>Cellulare:</strong> {{ discente.cellulare }}<br>
+                                <strong>Progetto:</strong> {{ discente.progetto.nome if discente.progetto else 'Nessun progetto' }}<br>
+                                <strong>Corsi Iscritti:</strong> 
+                                {% if discente.corsi %}
+                                    {{ discente.corsi | join(', ') }}
+                                {% else %}
+                                    Nessun corso iscritto
+                                {% endif %}
+                            </p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('discenti.modifica_discente', id=discente.id) }}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </a>
+                                <form action="{{ url_for('discenti.elimina_discente', id=discente.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Sei sicuro di voler eliminare questo discente?')">
+                                        <i class="bi bi-trash"></i> Elimina
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Paginazione Dinamica -->
+            <nav aria-label="Paginazione">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item"><a class="page-link" href="#">Precedente</a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">Successiva</a></li>
+                </ul>
+            </nav>
+        </main>
+    </div>
+</div>
+
+<!-- Script per la ricerca e i filtri -->
+<script>
+function filterCards() {
+    const input = document.getElementById("searchInput").value.toLowerCase();
+    const cards = document.querySelectorAll("#discentiGrid .col-md-6");
+
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(input) ? "" : "none";
+    });
+}
+
+function filterCardsByProject() {
+    const selectedProjectId = document.getElementById("projectFilter").value;
+    const cards = document.querySelectorAll("#discentiGrid .col-md-6");
+
+    cards.forEach(card => {
+        const cardProjectId = card.getAttribute("data-progetto");
+        if (selectedProjectId === "") {
+            card.style.display = "";
+        } else {
+            card.style.display = cardProjectId === selectedProjectId ? "" : "none";
+        }
+    });
+}
+</script>
+{% endblock %}

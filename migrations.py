@@ -14,26 +14,20 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize the db with this app
 db.init_app(app)
 
-# Function to reset migrations
-def reset_migrations():
-    """Reset migrations completely"""
-    # Remove existing migrations directory if it exists
+def reset_database():
+    """Reset database completely"""
+    # Remove existing database file if it exists
+    db_path = os.path.join(os.path.dirname(__file__), 'gestione_corsi.db')
+    if os.path.exists(db_path):
+        print("Removing existing database file...")
+        os.remove(db_path)
+    
+    # Remove migrations directory if it exists
     migrations_path = os.path.join(os.path.dirname(__file__), 'migrations')
     if os.path.exists(migrations_path):
         print("Removing existing migrations directory...")
         shutil.rmtree(migrations_path)
-    
-    # Remove alembic_version table from database if it exists
-    db_path = os.path.join(os.path.dirname(__file__), 'gestione_corsi.db')
-    if os.path.exists(db_path):
-        print("Removing alembic_version table from database...")
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS alembic_version")
-        conn.commit()
-        conn.close()
 
-# Function to create tables directly without migrations
 def create_tables():
     """Create all tables directly without migrations"""
     # Import models to ensure they're registered with SQLAlchemy
@@ -42,11 +36,31 @@ def create_tables():
     with app.app_context():
         print("Creating tables directly...")
         db.create_all()
+        
+        # Create an admin user
+        from models import User
+        admin = User(
+            username='admin',
+            email='admin@example.com',
+            nome='Admin',
+            cognome='User',
+            role='admin'
+        )
+        admin.set_password('admin123')
+        db.session.add(admin)
+        
+        try:
+            db.session.commit()
+            print("Admin user created successfully!")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error creating admin user: {e}")
+        
         print("Tables created successfully!")
 
 if __name__ == '__main__':
-    # Reset migrations first
-    reset_migrations()
+    # Reset database first
+    reset_database()
     
     # Create tables directly without using migrations
     create_tables()

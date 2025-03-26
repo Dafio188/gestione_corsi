@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Carica Risultati Test da Excel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Carica Risultati Test da Excel</h1>
+    <p>Test: <strong>{{ test.titolo }}</strong> per il corso <strong>{{ corso.titolo }}</strong></p>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            Istruzioni per il caricamento
+        </div>
+        <div class="card-body">
+            <ol>
+                <li>Prepara un file Excel con le seguenti colonne specifiche:</li>
+                <ul>
+                    <li>Colonna F (indice 5): Total points (punteggio)</li>
+                    <li>Colonna I (indice 8): Nome</li>
+                    <li>Colonna L (indice 11): Cognome</li>
+                    <li>Colonna O (indice 14): Comune di appartenenza</li>
+                    <li>Colonna R (indice 17): Indirizzo Email</li>
+                </ul>
+                <li>La colonna dell'email deve contenere l'indirizzo email del discente registrato nel sistema</li>
+                <li>Carica il file Excel utilizzando il form qui sotto</li>
+                <li>Clicca su "Importa Risultati"</li>
+            </ol>
+            <p class="text-info">
+                <i class="fas fa-info-circle"></i> 
+                Il sistema utilizzerà specificamente le colonne indicate sopra per importare i dati.
+            </p>
+        </div>
+    </div>
+    
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_carica_risultati', test_id=test.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="test_id" value="{{ test.id }}">
+        <div class="form-group">
+            <label for="file_excel">File Excel con i risultati:</label>
+            <input type="file" class="form-control-file" id="file_excel" name="file_excel" accept=".xlsx,.xls" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary mt-3">
+            <i class="fas fa-file-import"></i> Importa Risultati
+        </button>
+        <a href="{{ url_for('admin_test_risultati', test_id=test.id) }}" class="btn btn-secondary mt-3">
+            <i class="fas fa-arrow-left"></i> Torna ai Risultati
+        </a>
+    </form>
+</div>
+{% endblock %}
