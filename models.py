@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, UTC
 from extensions import db
 
 class Progetto(db.Model):
@@ -66,10 +66,11 @@ class Corso(db.Model):
     # Fix relationships to avoid conflicts
     docente = db.relationship('User', backref='corsi_insegnati')
     iscrizioni = db.relationship('Iscrizione', backref='corso_ref', cascade='all, delete-orphan')
-    test = db.relationship('Test', backref='corso_parent', cascade='all, delete-orphan', overlaps="test_list,corso")
+    test = db.relationship('Test', backref='test_parent', cascade='all, delete-orphan', overlaps="test_list,test_association,test_parent")
     
     # Add this direct relationship to access the progetto directly
-    progetto = db.relationship('Progetto', foreign_keys=[progetto_id], backref='corsi_list', overlaps="corsi,progetto_ref")
+    progetto = db.relationship('Progetto', foreign_keys=[progetto_id], backref='corsi_list', overlaps="corsi,progetto_ref,corsi_list")
+    test_list = db.relationship('Test', backref='test_association', overlaps="test_list,test_association,corso_parent")
 
 class Iscrizione(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -89,7 +90,7 @@ class Test(db.Model):
     forms_link = db.Column(db.String(255), nullable=True)
     
     # Add this relationship to access the corso directly
-    corso = db.relationship('Corso', foreign_keys=[corso_id], backref='test_list', overlaps="corso_parent,test")
+    corso = db.relationship('Corso', foreign_keys=[corso_id], backref='test_association', overlaps="corso_parent,test,test_association")
     
     # Relationship is defined in Corso class
     
