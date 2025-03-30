@@ -1,1 +1,16 @@
-# File di database e backup\ninstance/gestione_corsi.db\ninstance/gestione_corsi.db.*\n*.backup\n\n# Cartelle di upload\n/uploads/\n/static/uploads/\n\n# Ambiente virtuale\nvenv/\n__pycache__/\n*.pyc\n*.pyo\n*.pyd\n.Python\n
+# File di database e backup
+instance/gestione_corsi.db
+instance/gestione_corsi.db.*
+*.backup
+
+# Cartelle di upload
+/uploads/
+/static/uploads/
+
+# Ambiente virtuale e cache Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
