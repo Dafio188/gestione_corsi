@@ -3,7 +3,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
-from datetime import datetime, UTC, timezone
+from datetime import datetime, timezone
 from flask_migrate import Migrate
 from io import BytesIO
 from flask_wtf.csrf import CSRFProtect
@@ -885,7 +885,7 @@ def docente_salva_risultati_test(corso_id, test_id):
                 # Update existing result
                 risultato.punteggio = punteggio
                 risultato.superato = superato
-                risultato.data_completamento = datetime.now(UTC)
+                risultato.data_completamento = datetime.utcnow()
             else:
                 # Create new result
                 risultato = RisultatoTest(
@@ -1088,15 +1088,15 @@ def admin_nuovo_docente():
 @role_required(['admin'])
 def admin_corsi():
     corsi = Corso.query.all()
-    # Get timezone-aware now
-    now = datetime.now(UTC)
+    # Get current datetime without timezone
+    now = datetime.now()
     
-    # Make all corso dates timezone-aware
+    # Ensure all corso dates are naive (without timezone)
     for corso in corsi:
-        if corso.data_inizio.tzinfo is None:
-            corso.data_inizio = corso.data_inizio.replace(tzinfo=timezone.utc)
-        if corso.data_fine.tzinfo is None:
-            corso.data_fine = corso.data_fine.replace(tzinfo=timezone.utc)
+        if corso.data_inizio.tzinfo is not None:
+            corso.data_inizio = corso.data_inizio.replace(tzinfo=None)
+        if corso.data_fine.tzinfo is not None:
+            corso.data_fine = corso.data_fine.replace(tzinfo=None)
     
     return render_template('admin/corsi.html', corsi=corsi, now=now)
 
@@ -1883,7 +1883,7 @@ def admin_nuovo_attestato():
             attestato = Attestato(
                 iscrizione_id=iscrizione_id,
                 file_path=file_path,
-                data_generazione=datetime.now(UTC)
+                data_generazione=datetime.utcnow()
             )
             
             db.session.add(attestato)
@@ -2123,7 +2123,7 @@ def admin_genera_attestati_automatici():
             attestato = Attestato(
                 iscrizione_id=iscrizione.id,
                 file_path=file_path,
-                data_generazione=datetime.now(UTC)
+                data_generazione=datetime.utcnow()
             )
             
             db.session.add(attestato)
@@ -2409,7 +2409,7 @@ def admin_report_export_pdf():
         
         # Titolo
         elements.append(Paragraph("Report Progetti", title_style))
-        elements.append(Paragraph(f"Data: {datetime.now(UTC).strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
         elements.append(Paragraph(" ", normal_style))  # Spazio
         
         # Tabella
@@ -2452,7 +2452,7 @@ def admin_report_export_pdf():
         
         # Titolo e info progetto
         elements.append(Paragraph(f"Report Progetto: {progetto.titolo}", title_style))
-        elements.append(Paragraph(f"Data: {datetime.now(UTC).strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
         elements.append(Paragraph(" ", normal_style))  # Spazio
         
         info_progetto = [
@@ -2518,7 +2518,7 @@ def admin_report_export_pdf():
         
         # Titolo e info corso
         elements.append(Paragraph(f"Report Corso: {corso.titolo}", title_style))
-        elements.append(Paragraph(f"Data: {datetime.now(UTC).strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
         elements.append(Paragraph(" ", normal_style))  # Spazio
         
         docente = db.session.get(User, corso.docente_id)
@@ -2586,7 +2586,7 @@ def admin_report_export_pdf():
         
         # Titolo
         elements.append(Paragraph("Report Corsi", title_style))
-        elements.append(Paragraph(f"Data: {datetime.now(UTC).strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Paragraph(f"Data: {datetime.utcnow().strftime('%d/%m/%Y')}", normal_style))
         elements.append(Paragraph(" ", normal_style))  # Spazio
         
         # Tabella
@@ -2636,7 +2636,7 @@ def admin_report_export_pdf():
 @role_required(['discente'])
 def discente_dashboard():
     # Get current date for comparisons
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
     
     # Get user's enrollments
     iscrizioni = Iscrizione.query.filter_by(discente_id=current_user.id).all()
@@ -2644,15 +2644,10 @@ def discente_dashboard():
     # Get user's certificates
     attestati = Attestato.query.join(Iscrizione).filter(Iscrizione.discente_id == current_user.id).all()
     
-    # Get timezone-aware now
-    now = datetime.now(UTC)
+    # Get current time without timezone
+    now = datetime.now()
     
-    # Make all corso dates timezone-aware
-    for iscrizione in iscrizioni:
-        if iscrizione.corso_ref and iscrizione.corso_ref.data_fine.tzinfo is None:
-            iscrizione.corso_ref.data_fine = iscrizione.corso_ref.data_fine.replace(tzinfo=timezone.utc)
-    
-    # Count completed courses - add a check for None
+    # Count completed courses without timezone manipulation
     corsi_completati = sum(1 for i in iscrizioni if i.corso_ref is not None and i.corso_ref.data_fine < now)
     
     return render_template('discente/dashboard.html', 
@@ -2666,7 +2661,7 @@ def discente_dashboard():
 @role_required(['discente'])
 def discente_corsi():
     # Aggiungi questa riga per definire 'now'
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
     
     iscrizioni = Iscrizione.query.filter_by(discente_id=current_user.id).all()
     return render_template('discente/corsi.html', iscrizioni=iscrizioni, now=now)
@@ -2695,7 +2690,7 @@ def discente_dettaglio_corso(corso_id):
         return risultati_dict.get(test_obj.id)
     
     # Add the current datetime for template comparison
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
     
     return render_template('discente/dettaglio_corso.html', 
                           corso=corso, 
@@ -2718,7 +2713,7 @@ def discente_corsi_disponibili():
     # Filter out courses the user is already enrolled in
     corsi_disponibili = [c for c in corsi if c.id not in iscrizioni_esistenti]
     
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
     
     return render_template('discente/corsi_disponibili.html', 
                           corsi=corsi_disponibili,
