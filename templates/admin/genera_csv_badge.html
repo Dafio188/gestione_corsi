@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Genera CSV per Badge - Gestione Corsi PNRR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Genera CSV per Badge</h2>
+            <p class="lead">Sono stati trovati {{ count }} attestati da esportare.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Discente</th>
+                            <th>Email</th>
+                            <th>Corso</th>
+                            <th>Data Generazione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attestato in attestati %}
+                        <tr>
+                            <td>{{ attestato.discente_nome }}</td>
+                            <td>{{ attestato.discente_email }}</td>
+                            <td>{{ attestato.corso_titolo }}</td>
+                            <td>{{ attestato.data_generazione }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <form action="{{ url_for('export_csv_badge') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-file-csv"></i> Genera e Scarica CSV
+                </button>
+                <a href="{{ url_for('admin_attestati') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Torna Indietro
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

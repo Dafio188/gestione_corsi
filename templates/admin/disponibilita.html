@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Disponibilità Docenti{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Gestione Disponibilità Docenti</h2>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Filtra per docente</h5>
+                <a href="{{ url_for('calendario.admin_calendario') }}" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt me-2"></i> Vista Calendario
+                </a>
+            </div>
+            <form method="GET" action="{{ url_for('disponibilita.admin_disponibilita') }}" class="row g-3">
+                <div class="col-md-6">
+                    <select name="docente_id" id="docente_select" class="form-select">
+                        <option value="">Tutti i docenti</option>
+                        {% for docente in docenti %}
+                        <option value="{{ docente.id }}" {% if request.args.get('docente_id')|int == docente.id %}selected{% endif %}>
+                            {{ docente.nome }} {{ docente.cognome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filtra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vista Tabella -->
+    <div class="table-responsive">
+        {% if disponibilita %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Docente</th>
+                    <th>Data</th>
+                    <th>Ora Inizio</th>
+                    <th>Ora Fine</th>
+                    <th>Stato</th>
+                    <th>Note</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for disp in disponibilita %}
+                <tr>
+                    <td>{{ disp.docente.nome }} {{ disp.docente.cognome }}</td>
+                    <td>{{ disp.data.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ disp.ora_inizio.strftime('%H:%M') }}</td>
+                    <td>{{ disp.ora_fine.strftime('%H:%M') }}</td>
+                    <td>
+                        <span class="badge {% if disp.stato == 'disponibile' %}bg-success{% elif disp.stato == 'occupato' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ disp.stato }}
+                        </span>
+                    </td>
+                    <td>{{ disp.note }}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            {% if disp.stato == 'disponibile' %}
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#prenotaModal{{ disp.id }}">
+                                <i class="fas fa-calendar-check"></i> Prenota
+                            </button>
+                            {% elif disp.stato == 'occupato' %}
+                            <form action="{{ url_for('calendario.update_event_form', id=disp.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="libera" value="on">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Sei sicuro di voler annullare questa prenotazione?')">
+                                    <i class="fas fa-calendar-times"></i> Annulla
+                                </button>
+                            </form>
+                            {% endif %}
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modificaModal{{ disp.id }}">
+                                <i class="fas fa-edit"></i> Modifica
+                            </button>
+                        </div>
+
+                        <!-- Modal Prenota -->
+                        <div class="modal fade" id="prenotaModal{{ disp.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Prenota Disponibilità</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ url_for('disponibilita.admin_prenota_disponibilita', id=disp.id) }}" method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="corso{{ disp.id }}" class="form-label">Seleziona Corso</label>
+                                                <select class="form-select" id="corso{{ disp.id }}" name="corso_id" required>
+                                                    <option value="">Seleziona un corso...</option>
+                                                    {% for corso in corsi %}
+                                                    <option value="{{ corso.id }}">{{ corso.titolo }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="note_prenotazione{{ disp.id }}" class="form-label">Note</label>
+                                                <textarea class="form-control" id="note_prenotazione{{ disp.id }}" name="note_prenotazione" rows="3"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                                            <button type="submit" class="btn btn-primary">Prenota</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Modifica -->
+                        <div class="modal fade" id="modificaModal{{ disp.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Modifica Disponibilità</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="{{ url_for('calendario.update_event_form', id=disp.id) }}" method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="data{{ disp.id }}" class="form-label">Data</label>
+                                                <input type="date" class="form-control" id="data{{ disp.id }}" name="data" value="{{ disp.data.strftime('%Y-%m-%d') }}" required>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="ora_inizio{{ disp.id }}" class="form-label">Ora Inizio</label>
+                                                    <input type="time" class="form-control" id="ora_inizio{{ disp.id }}" name="ora_inizio" value="{{ disp.ora_inizio.strftime('%H:%M') }}" required>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="ora_fine{{ disp.id }}" class="form-label">Ora Fine</label>
+                                                    <input type="time" class="form-control" id="ora_fine{{ disp.id }}" name="ora_fine" value="{{ disp.ora_fine.strftime('%H:%M') }}" required>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="stato{{ disp.id }}" class="form-label">Stato</label>
+                                                <select class="form-select" id="stato{{ disp.id }}" name="stato" required>
+                                                    <option value="disponibile" {% if disp.stato == 'disponibile' %}selected{% endif %}>Disponibile</option>
+                                                    <option value="occupato" {% if disp.stato == 'occupato' %}selected{% endif %}>Occupato</option>
+                                                    <option value="annullato" {% if disp.stato == 'annullato' %}selected{% endif %}>Annullato</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="note{{ disp.id }}" class="form-label">Note</label>
+                                                <textarea class="form-control" id="note{{ disp.id }}" name="note" rows="3">{{ disp.note }}</textarea>
+                                            </div>
+                                            {% if disp.stato == 'occupato' %}
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="libera{{ disp.id }}" name="libera">
+                                                <label class="form-check-label" for="libera{{ disp.id }}">
+                                                    Libera questa disponibilità
+                                                </label>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                                            <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert alert-info">
+            Non ci sono disponibilità registrate.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal per aggiungere/modificare disponibilità -->
+<div class="modal fade" id="disponibilitaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Aggiungi Disponibilità</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="disponibilitaForm">
+                    <input type="hidden" id="disponibilita_id" name="id">
+                    <div class="mb-3">
+                        <label for="docente_id" class="form-label">Docente</label>
+                        <select class="form-select" id="docente_id" name="docente_id" required>
+                            {% for docente in docenti %}
+                            <option value="{{ docente.id }}">{{ docente.nome }} {{ docente.cognome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="data" name="data" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ora_inizio" class="form-label">Ora Inizio</label>
+                        <input type="time" class="form-control" id="ora_inizio" name="ora_inizio" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ora_fine" class="form-label">Ora Fine</label>
+                        <input type="time" class="form-control" id="ora_fine" name="ora_fine" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stato" class="form-label">Stato</label>
+                        <select class="form-select" id="stato" name="stato" required>
+                            <option value="disponibile">Disponibile</option>
+                            <option value="occupato">Occupato</option>
+                            <option value="non_disponibile">Non Disponibile</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note</label>
+                        <textarea class="form-control" id="note" name="note" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-primary" onclick="saveDisponibilita()">Salva</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let disponibilitaModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    disponibilitaModal = new bootstrap.Modal(document.getElementById('disponibilitaModal'));
+});
+
+function editDisponibilita(id) {
+    // Recupera i dati della disponibilità
+    fetch(`/api/disponibilita/eventi/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('disponibilita_id').value = data.id;
+            document.getElementById('docente_id').value = data.docente_id;
+            document.getElementById('data').value = data.data;
+            document.getElementById('ora_inizio').value = data.ora_inizio;
+            document.getElementById('ora_fine').value = data.ora_fine;
+            document.getElementById('stato').value = data.stato;
+            document.getElementById('note').value = data.note || '';
+            
+            document.getElementById('modalTitle').textContent = 'Modifica Disponibilità';
+            disponibilitaModal.show();
+        });
+}
+
+function deleteDisponibilita(id) {
+    if (confirm('Sei sicuro di voler eliminare questa disponibilità?')) {
+        fetch(`/api/disponibilita/eventi/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Errore durante l\'eliminazione della disponibilità');
+            }
+        });
+    }
+}
+
+function saveDisponibilita() {
+    const form = document.getElementById('disponibilitaForm');
+    const formData = new FormData(form);
+    const id = formData.get('id');
+    
+    const data = {
+        docente_id: formData.get('docente_id'),
+        data: formData.get('data'),
+        ora_inizio: formData.get('ora_inizio'),
+        ora_fine: formData.get('ora_fine'),
+        stato: formData.get('stato'),
+        note: formData.get('note')
+    };
+    
+    const url = id ? `/api/disponibilita/eventi/${id}` : '/api/disponibilita/eventi';
+    const method = id ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Errore durante il salvataggio della disponibilità');
+        }
+    });
+}
+</script>
+{% endblock %} 

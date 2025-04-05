@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Disponibilità{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Modifica Disponibilità</h2>
+        <a href="{{ url_for('disponibilita.docente_disponibilita') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Torna alla lista
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        {{ form.data.label(class="form-label") }}
+                        {{ form.data(class="form-control") }}
+                        {% if form.data.errors %}
+                            <div class="text-danger">
+                                {% for error in form.data.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.ora_inizio.label(class="form-label") }}
+                        {{ form.ora_inizio(class="form-control") }}
+                        {% if form.ora_inizio.errors %}
+                            <div class="text-danger">
+                                {% for error in form.ora_inizio.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.ora_fine.label(class="form-label") }}
+                        {{ form.ora_fine(class="form-control") }}
+                        {% if form.ora_fine.errors %}
+                            <div class="text-danger">
+                                {% for error in form.ora_fine.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.note.label(class="form-label") }}
+                    {{ form.note(class="form-control", rows="3") }}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salva modifiche
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

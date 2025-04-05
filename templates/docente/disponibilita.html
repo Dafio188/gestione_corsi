@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Le mie disponibilità{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Le mie disponibilità</h2>
+        <div>
+            <a href="{{ url_for('calendario.docente_calendario') }}" class="btn btn-primary me-2">
+                <i class="fas fa-calendar-alt me-2"></i> Vista Calendario
+            </a>
+            <a href="{{ url_for('disponibilita.docente_nuova_disponibilita') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i> Nuova Disponibilità
+            </a>
+        </div>
+    </div>
+
+    {% if disponibilita %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Ora Inizio</th>
+                    <th>Ora Fine</th>
+                    <th>Stato</th>
+                    <th>Note</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for disp in disponibilita %}
+                <tr>
+                    <td>{{ disp.data.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ disp.ora_inizio.strftime('%H:%M') }}</td>
+                    <td>{{ disp.ora_fine.strftime('%H:%M') }}</td>
+                    <td>
+                        <span class="badge {% if disp.stato == 'disponibile' %}bg-success{% elif disp.stato == 'occupato' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ disp.stato }}
+                        </span>
+                    </td>
+                    <td>{{ disp.note }}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('disponibilita.docente_modifica_disponibilita', id=disp.id) }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('disponibilita.docente_elimina_disponibilita', id=disp.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Sei sicuro di voler eliminare questa disponibilità?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        Non hai ancora inserito nessuna disponibilità.
+    </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestione form nuova disponibilità
+    const formNuova = document.getElementById('formNuovaDisponibilita');
+    formNuova.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        try {
+            const response = await fetch('/docente/disponibilita/nuovo', {
+                method: 'POST',
+                body: new FormData(this)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error('Errore:', error);
+            alert('Si è verificato un errore durante il salvataggio');
+        }
+    });
+
+    // Gestione modifica
+    const modalModifica = new bootstrap.Modal(document.getElementById('modalModifica'));
+    let disponibilitaSelezionata = null;
+
+    document.querySelectorAll('.btn-modifica').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            disponibilitaSelezionata = row.dataset.id;
+            
+            // Popola il form con i dati esistenti
+            const cells = row.cells;
+            const [giorno, mese, anno] = cells[0].textContent.split('/');
+            const [oraInizio, oraFine] = cells[1].textContent.split(' - ');
+            
+            document.getElementById('disponibilita_id').value = disponibilitaSelezionata;
+            document.getElementById('mod_data').value = `${anno}-${mese}-${giorno}`;
+            document.getElementById('mod_ora_inizio').value = oraInizio;
+            document.getElementById('mod_ora_fine').value = oraFine;
+            document.getElementById('mod_note').value = cells[2].textContent;
+            
+            modalModifica.show();
+        });
+    });
+
+    // Gestione salvataggio modifiche
+    document.getElementById('btnSalvaModifiche').addEventListener('click', async function() {
+        if (!disponibilitaSelezionata) return;
+        
+        const formData = new FormData(document.getElementById('formModificaDisponibilita'));
+        
+        try {
+            const response = await fetch(`/docente/disponibilita/${disponibilitaSelezionata}/modifica`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                modalModifica.hide();
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error('Errore:', error);
+            alert('Si è verificato un errore durante il salvataggio delle modifiche');
+        }
+    });
+
+    // Gestione eliminazione
+    document.querySelectorAll('.btn-elimina').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('Sei sicuro di voler eliminare questa disponibilità?')) return;
+            
+            const row = this.closest('tr');
+            const id = row.dataset.id;
+            
+            try {
+                const response = await fetch(`/docente/disponibilita/${id}/elimina`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    row.remove();
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Si è verificato un errore durante l\'eliminazione');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

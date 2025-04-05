@@ -24,7 +24,7 @@
                     <label for="corso_id" class="form-label">Corso</label>
                     <select class="form-select" id="corso_id" name="corso_id" required>
                         {% for corso in corsi %}
-                        <option value="{{ corso.id }}">{{ corso.titolo }}</option>
+                        <option value="{{ corso.id }}" {% if corso_id and corso.id|string == corso_id|string %}selected{% endif %}>{{ corso.titolo }}</option>
                         {% endfor %}
                     </select>
                 </div>

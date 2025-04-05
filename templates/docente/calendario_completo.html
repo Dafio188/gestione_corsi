@@ -1,0 +1,682 @@
+{% extends "base.html" %}
+
+{% block title %}Le Mie Disponibilità{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+.calendar-container {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin: 15px 0;
+    height: 600px;
+}
+
+.fc {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --fc-border-color: #e5e7eb;
+    --fc-today-bg-color: #f3f8ff;
+    --fc-neutral-bg-color: #fff;
+    --fc-list-event-hover-bg-color: #f3f8ff;
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1em;
+    background: #fff;
+    padding: 0.8rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a56db;
+}
+
+.fc .fc-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.fc .fc-button-primary {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #fff;
+}
+
+.fc .fc-button-primary:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #111827;
+}
+
+.fc-direction-ltr .fc-toolbar > * > :not(:first-child) {
+    margin-left: 0.5rem;
+}
+
+.fc .fc-timegrid-slot {
+    height: 2.5rem;
+}
+
+.fc .fc-timegrid-slot-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.fc-theme-standard td, .fc-theme-standard th {
+    border-color: #e5e7eb;
+}
+
+.fc-event {
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.fc-event:hover {
+    transform: translateY(-1px);
+}
+
+.fc-event.disponibile {
+    background: #10b981;
+    border-color: #059669;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+}
+
+.fc-event.occupato {
+    background: #f59e0b;
+    border-color: #d97706;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+}
+
+.filters {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    border: 1px solid #e5e7eb;
+}
+
+.form-select {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.4rem;
+    font-size: 0.85rem;
+    color: #374151;
+    background-color: #fff;
+    transition: all 0.2s;
+}
+
+.form-select:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.1);
+}
+
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #f9fafb;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #374151;
+}
+
+.legend-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+.page-title {
+    font-size: 1.25rem;
+    color: #111827;
+}
+
+.btn-primary {
+    background: #1a56db;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+    transform: translateY(-1px);
+}
+
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+    border-bottom-color: #e5e7eb;
+    padding: 1rem 1.25rem;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    border-top-color: #e5e7eb;
+    padding: 1rem 1.25rem;
+}
+
+.form-control {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.1);
+}
+
+.fc-daygrid-day.has-events .fc-daygrid-day-number {
+    background-color: #e8f0fe;
+    color: #1a56db;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(26, 86, 219, 0.1);
+    transition: all 0.2s ease;
+}
+
+.fc-daygrid-day.has-events:hover .fc-daygrid-day-number {
+    transform: scale(1.1);
+    box-shadow: 0 4px 6px rgba(26, 86, 219, 0.2);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">Le Mie Disponibilità</h1>
+        <a href="{{ url_for('disponibilita.docente_disponibilita') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Indietro
+        </a>
+    </div>
+    
+    <div class="filters">
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label" for="stato_filter">Stato</label>
+                <select class="form-select" id="stato_filter">
+                    <option value="all">Tutti gli stati</option>
+                    <option value="disponibile">Disponibile</option>
+                    <option value="occupato">Occupato</option>
+                    <option value="annullato">Annullato</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #10b981;"></div>
+            <span>Disponibile</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f59e0b;"></div>
+            <span>Occupato</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ef4444;"></div>
+            <span>Annullato</span>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Modal per creazione/modifica eventi -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gestione Disponibilità</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="eventForm">
+                    <input type="hidden" id="event_id">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="docente_id" value="{{ current_user.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="data" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="data" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="ora_inizio" class="form-label">Ora Inizio</label>
+                            <input type="time" class="form-control" id="ora_inizio" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="ora_fine" class="form-label">Ora Fine</label>
+                            <input type="time" class="form-control" id="ora_fine" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stato" class="form-label">Stato</label>
+                        <select class="form-select" id="stato" required>
+                            <option value="disponibile">Disponibile</option>
+                            <option value="occupato">Occupato</option>
+                            <option value="annullato">Annullato</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note</label>
+                        <textarea class="form-control" id="note" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-danger" id="deleteBtn" onclick="deleteEvent()" style="display: none;">Elimina</button>
+                <button type="button" class="btn btn-primary" onclick="saveEvent()">Salva</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script>
+var calendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    
+    // Aggiungiamo un listener per il pulsante Annulla
+    document.querySelector('button[data-bs-dismiss="modal"]').addEventListener('click', function() {
+        setTimeout(function() {
+            window.location.reload();
+        }, 500);
+    });
+    
+    // Aggiungiamo un listener per il pulsante Annulla nel footer
+    document.querySelector('.modal-footer .btn-secondary').addEventListener('click', function() {
+        setTimeout(function() {
+            window.location.reload();
+        }, 500);
+    });
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'it',
+        initialView: 'dayGridMonth',
+        timeZone: 'local',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Oggi',
+            month: 'Mese',
+            week: 'Settimana',
+            day: 'Giorno'
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '20:00:00',
+        allDaySlot: false,
+        height: 'auto',
+        firstDay: 1,
+        slotLabelFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        selectable: true,
+        select: function(info) {
+            // Debug delle date
+            console.log('Data selezionata (start):', info.start);
+            console.log('Data selezionata (end):', info.end);
+            
+            // Convertiamo le date in locale
+            const startDate = new Date(info.start);
+            const endDate = new Date(info.end);
+            
+            console.log('Data inizio (locale):', startDate);
+            console.log('Data fine (locale):', endDate);
+            
+            // Formattiamo la data in YYYY-MM-DD
+            const formatDateToLocal = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            document.getElementById('data').value = formatDateToLocal(startDate);
+            document.getElementById('ora_inizio').value = startDate.toTimeString().slice(0,5);
+            document.getElementById('ora_fine').value = endDate.toTimeString().slice(0,5);
+            
+            document.getElementById('event_id').value = '';
+            document.getElementById('stato').value = 'disponibile';
+            document.getElementById('note').value = '';
+            
+            document.getElementById('deleteBtn').style.display = 'none';
+            
+            var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            modal.show();
+        },
+        events: function(info, successCallback, failureCallback) {
+            var stato = document.getElementById('stato_filter').value;
+            
+            var url = '/docente/calendario/eventi';
+            var params = new URLSearchParams();
+            if (stato !== 'all') params.append('stato', stato);
+            if (info.start) params.append('start', info.start.toISOString());
+            if (info.end) params.append('end', info.end.toISOString());
+            
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    var events = data.map(event => ({
+                        id: event.id,
+                        title: event.title,
+                        start: event.start,
+                        end: event.end,
+                        className: event.stato,
+                        extendedProps: {
+                            stato: event.stato,
+                            note: event.note
+                        }
+                    }));
+                    successCallback(events);
+                })
+                .catch(error => {
+                    console.error('Errore nel recupero degli eventi:', error);
+                    failureCallback(error);
+                });
+        },
+        eventClick: function(info) {
+            document.getElementById('event_id').value = info.event.id;
+            
+            // Debug delle date
+            console.log('Evento cliccato (start):', info.event.start);
+            console.log('Evento cliccato (end):', info.event.end);
+            
+            // Convertiamo le date in locale
+            const startDate = new Date(info.event.start);
+            const endDate = new Date(info.event.end);
+            
+            console.log('Data inizio evento (locale):', startDate);
+            console.log('Data fine evento (locale):', endDate);
+            
+            // Formattiamo la data in YYYY-MM-DD
+            const formatDateToLocal = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            document.getElementById('data').value = formatDateToLocal(startDate);
+            document.getElementById('ora_inizio').value = startDate.toTimeString().slice(0,5);
+            document.getElementById('ora_fine').value = endDate.toTimeString().slice(0,5);
+            document.getElementById('stato').value = info.event.extendedProps.stato;
+            document.getElementById('note').value = info.event.extendedProps.note || '';
+            
+            document.getElementById('deleteBtn').style.display = 'block';
+            
+            var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            modal.show();
+        },
+        dateClick: function(info) {
+            // Debug delle date
+            console.log('Data cliccata:', info.date);
+            
+            // Convertiamo la data in locale
+            const clickedDate = new Date(info.date);
+            
+            console.log('Data cliccata (locale):', clickedDate);
+            
+            // Formattiamo la data in YYYY-MM-DD
+            const formatDateToLocal = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            document.getElementById('event_id').value = '';
+            document.getElementById('data').value = formatDateToLocal(clickedDate);
+            document.getElementById('ora_inizio').value = '09:00';
+            document.getElementById('ora_fine').value = '10:00';
+            document.getElementById('stato').value = 'disponibile';
+            document.getElementById('note').value = '';
+            
+            document.getElementById('deleteBtn').style.display = 'none';
+            
+            var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            modal.show();
+        },
+        eventDidMount: function(info) {
+            info.el.title = `${info.event.title}\nStato: ${info.event.extendedProps.stato}`;
+        },
+        dayCellDidMount: function(arg) {
+            arg.el.classList.remove('has-events');
+            
+            var events = calendar.getEvents().filter(event => {
+                var eventDate = event.start.toDateString();
+                var cellDate = arg.date.toDateString();
+                return eventDate === cellDate;
+            });
+            
+            if (events.length > 0) {
+                arg.el.classList.add('has-events');
+            }
+        }
+    });
+    
+    calendar.render();
+    
+    document.getElementById('stato_filter')?.addEventListener('change', function() {
+        calendar.refetchEvents();
+    });
+});
+
+function saveEvent() {
+    var eventId = document.getElementById('event_id').value;
+    var formData = document.getElementById('data').value;
+    var oraInizio = document.getElementById('ora_inizio').value;
+    var oraFine = document.getElementById('ora_fine').value;
+    
+    // Debug delle date
+    console.log('Data form:', formData);
+    console.log('Ora inizio:', oraInizio);
+    console.log('Ora fine:', oraFine);
+    
+    // Creiamo le date in modo più esplicito
+    var [year, month, day] = formData.split('-').map(Number);
+    var [startHour, startMinute] = oraInizio.split(':').map(Number);
+    var [endHour, endMinute] = oraFine.split(':').map(Number);
+    
+    // Creiamo le date in locale
+    var start = new Date(year, month - 1, day, startHour, startMinute);
+    var end = new Date(year, month - 1, day, endHour, endMinute);
+    
+    console.log('Data inizio creata:', start);
+    console.log('Data fine creata:', end);
+    
+    // Formattiamo le date in modo esplicito
+    function formatDate(date) {
+        return date.getFullYear() + '-' +
+               String(date.getMonth() + 1).padStart(2, '0') + '-' +
+               String(date.getDate()).padStart(2, '0') + 'T' +
+               String(date.getHours()).padStart(2, '0') + ':' +
+               String(date.getMinutes()).padStart(2, '0') + ':00';
+    }
+    
+    var requestData = {
+        docente_id: document.getElementById('docente_id').value,
+        start: formatDate(start),
+        end: formatDate(end),
+        stato: document.getElementById('stato').value,
+        note: document.getElementById('note').value
+    };
+    
+    console.log('Dati inviati al server:', requestData);
+
+    var method = eventId ? 'PUT' : 'POST';
+    var url = eventId ? `/api/calendario/eventi/${eventId}` : '/api/calendario/eventi';
+
+    // Mostra un indicatore di caricamento
+    var saveButton = document.querySelector('button[onclick="saveEvent()"]');
+    var originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvataggio...';
+    saveButton.disabled = true;
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Si è verificato un errore');
+            });
+        }
+        return response.json();
+    })
+    .then(() => {
+        // Chiudiamo il modale
+        var modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Facciamo un refresh della pagina dopo un breve ritardo
+        setTimeout(function() {
+            window.location.reload();
+        }, 500);
+    })
+    .catch(error => {
+        // Ripristina il pulsante in caso di errore
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+        
+        console.error('Error:', error);
+        alert(error.message || 'Si è verificato un errore durante il salvataggio');
+    });
+}
+
+function deleteEvent() {
+    if (!confirm('Sei sicuro di voler eliminare questa disponibilità?')) {
+        return;
+    }
+
+    var eventId = document.getElementById('event_id').value;
+    
+    // Mostra un indicatore di caricamento
+    var deleteButton = document.getElementById('deleteBtn');
+    var originalText = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminazione...';
+    deleteButton.disabled = true;
+    
+    fetch(`/api/calendario/eventi/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Si è verificato un errore durante l\'eliminazione');
+            });
+        }
+        
+        // Chiudiamo il modale
+        var modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Facciamo un refresh della pagina dopo un breve ritardo
+        setTimeout(function() {
+            window.location.reload();
+        }, 500);
+    })
+    .catch(error => {
+        // Ripristina il pulsante in caso di errore
+        deleteButton.innerHTML = originalText;
+        deleteButton.disabled = false;
+        
+        console.error('Error:', error);
+        alert(error.message || 'Si è verificato un errore durante l\'eliminazione');
+    });
+}
+</script>
+{% endblock %} 

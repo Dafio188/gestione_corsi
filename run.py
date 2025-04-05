@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, send_from_directory
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, send_from_directory, send_file
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -21,6 +21,12 @@ import xlsxwriter
 from extensions import db  # Import db from extensions
 from routes import progetti
 from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato, Progetto, Nota  # Import all models
+import secrets
+import csv
+import io
+from routes.calendario import calendario_bp
+from models import DisponibilitaDocente
+from routes.disponibilita import disponibilita_bp
 
 # Define allowed file extensions
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'}
@@ -31,6 +37,7 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gestione_corsi.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Ensure upload directories exist
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'test'), exist_ok=True)
@@ -43,21 +50,27 @@ csrf.init_app(app)
 # Initialize database with the app
 db.init_app(app)
 
+# Initialize LoginManager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
 
 # Initialize login manager
-login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Effettua il login per accedere a questa pagina'
 login_manager.login_message_category = 'warning'
 
-# Keep the rest of the code as is
-# Move the role_required decorator definition before it's used
+# Registra i blueprints
+app.register_blueprint(disponibilita_bp)
+app.register_blueprint(calendario_bp)
+
+# Configurazione del login manager e altre impostazioni
 @login_manager.user_loader
 def load_user(user_id):
-    # Replace Query.get() with Session.get()
     return db.session.get(User, int(user_id))
 
 # Decoratore per controllo ruoli
@@ -65,8 +78,8 @@ def role_required(roles):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            print(f"Role check for user: {current_user.username}, user role: {current_user.role}, required roles: {roles}")
-            if not current_user.is_authenticated or current_user.role not in roles:
+            print(f"Role check for user: {current_user.username}, user ruolo: {current_user.ruolo}, required roles: {roles}")
+            if not current_user.is_authenticated or current_user.ruolo not in roles:
                 flash('Non hai i permessi per accedere a questa pagina', 'danger')
                 return redirect(url_for('login'))
             return f(*args, **kwargs)
@@ -85,26 +98,26 @@ def utility_processor():
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        # Redirect based on user role
-        if current_user.role == 'admin':
+        # Redirect based on user ruolo
+        if current_user.ruolo == 'admin':
             return redirect(url_for('admin_dashboard'))
-        elif current_user.role == 'docente':
+        elif current_user.ruolo == 'docente':
             return redirect(url_for('docente_dashboard'))
         else:  # discente
-            return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+            return redirect(url_for('discente_dashboard'))
     else:
         return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        # Redirect based on user role
-        if current_user.role == 'admin':
+        # Redirect based on user ruolo
+        if current_user.ruolo == 'admin':
             return redirect(url_for('admin_dashboard'))
-        elif current_user.role == 'docente':
+        elif current_user.ruolo == 'docente':
             return redirect(url_for('docente_dashboard'))
         else:  # discente
-            return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+            return redirect(url_for('discente_dashboard'))
     
     if request.method == 'POST':
         username = request.form.get('username')
@@ -116,13 +129,13 @@ def login():
             login_user(user)
             flash('Login effettuato con successo', 'success')
             
-            # Redirect based on user role
-            if user.role == 'admin':
+            # Redirect based on user ruolo
+            if user.ruolo == 'admin':
                 return redirect(url_for('admin_dashboard'))
-            elif user.role == 'docente':
+            elif user.ruolo == 'docente':
                 return redirect(url_for('docente_dashboard'))
             else:  # discente
-                return redirect(url_for('discente_dashboard'))  # Modificato per andare alla dashboard
+                return redirect(url_for('discente_dashboard'))
         else:
             flash('Username o password non validi', 'danger')
     
@@ -137,7 +150,7 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
+    if current_user.ruolo == 'admin':
         # Get data for admin dashboard
         progetti = Progetto.query.all()
         corsi = Corso.query.all()
@@ -153,10 +166,9 @@ def dashboard():
                               docenti=docenti,
                               test_completati=test_completati,
                               attestati=attestati)
-    elif current_user.role == 'docente':
+    elif current_user.ruolo == 'docente':
         return redirect(url_for('docente_corsi'))
-    elif current_user.role == 'discente':
-        # Redirect to discente_corsi instead of discente_dashboard
+    elif current_user.ruolo == 'discente':
         return redirect(url_for('discente_corsi'))
     else:
         flash('Ruolo non riconosciuto', 'danger')
@@ -167,20 +179,19 @@ def dashboard():
 @login_required
 @role_required(['admin'])
 def admin_dashboard():
-    # Count data for dashboard
-    progetti_count = Progetto.query.count()
-    corsi_count = Corso.query.count()
     discenti_count = User.query.filter_by(role='discente').count()
     docenti_count = User.query.filter_by(role='docente').count()
-    test_count = RisultatoTest.query.count()
+    corsi_count = Corso.query.count()
+    test_count = Test.query.count()
+    progetti_count = Progetto.query.count()
     attestati_count = Attestato.query.count()
     
     return render_template('admin/dashboard.html', 
-                          progetti_count=progetti_count,
-                          corsi_count=corsi_count,
                           discenti_count=discenti_count,
                           docenti_count=docenti_count,
+                          corsi_count=corsi_count,
                           test_count=test_count,
+                          progetti_count=progetti_count,
                           attestati_count=attestati_count)
 
 # Add this route after your admin_dashboard route
@@ -404,12 +415,16 @@ def admin_nuova_iscrizione():
         return redirect(url_for('admin_corsi'))
     
     # Ottieni tutti i discenti e corsi per il form
-    discenti = User.query.filter_by(role='discente').all()
+    discenti = User.query.filter_by(ruolo='discente').all()
     corsi = Corso.query.all()
+    
+    # Se viene passato un corso_id come parametro, pre-selezionalo
+    corso_id = request.args.get('corso_id')
     
     return render_template('admin/nuova_iscrizione.html', 
                           discenti=discenti, 
-                          corsi=corsi)
+                          corsi=corsi,
+                          corso_id=corso_id)
 
 @app.route('/admin/utenti/modifica/<int:utente_id>', methods=['GET', 'POST'])
 @login_required
@@ -537,7 +552,7 @@ def admin_elimina_utente(utente_id):
 @role_required(['admin'])
 def admin_nuovo_corso():
     # Get all docenti and progetti for the form
-    docenti = User.query.filter_by(role='docente').all()
+    docenti = User.query.filter_by(ruolo='docente').all()
     progetti = Progetto.query.all()
     
     if request.method == 'POST':
@@ -657,6 +672,36 @@ def admin_modifica_corso(corso_id):
         return redirect(url_for('admin_corsi'))
     
     return render_template('admin/modifica_corso.html', corso=corso, docenti=docenti, progetti=progetti)
+
+@app.route('/admin/calendario/eventi')
+@login_required
+@role_required(['admin'])
+def admin_calendario_eventi():
+    # Recupera i parametri di filtro
+    docente_id = request.args.get('docente_id', type=int)
+    corso_id = request.args.get('corso_id', type=int)
+    stato = request.args.get('stato')
+    
+    # Log dei parametri
+    print(f"Parametri ricevuti: docente_id={docente_id}, corso_id={corso_id}, stato={stato}")
+    # Query base
+    query = DisponibilitaDocente.query
+    
+    # Applica i filtri
+    if docente_id:
+        query = query.filter_by(docente_id=docente_id)
+    if corso_id:
+        query = query.filter_by(corso_id=corso_id)
+    if stato:
+        query = query.filter_by(stato=stato)
+    
+    # Recupera gli eventi
+    eventi = query.all()
+    # Log degli eventi
+    print(f"Eventi trovati: {len(eventi)}")
+    # Converti gli eventi in formato JSON
+    return jsonify([evento.to_dict() for evento in eventi])
+
 
 # Rotte per docenti
 @app.route('/docente/dashboard')
@@ -1042,7 +1087,7 @@ def docente_elimina_nota(nota_id):
 @login_required
 @role_required(['admin'])
 def admin_docenti():
-    docenti = User.query.filter_by(role='docente').all()
+    docenti = User.query.filter_by(ruolo='docente').all()
     return render_template('admin/docenti.html', docenti=docenti)
 
 @app.route('/admin/docenti/nuovo', methods=['GET', 'POST'])
@@ -1088,17 +1133,15 @@ def admin_nuovo_docente():
 @role_required(['admin'])
 def admin_corsi():
     corsi = Corso.query.all()
-    # Get current datetime without timezone
-    now = datetime.now()
+    docenti = User.query.filter_by(role='docente').all()
+    progetti = Progetto.query.all()
+    now = datetime.now().date()  # Convertiamo in date senza timezone
     
-    # Ensure all corso dates are naive (without timezone)
-    for corso in corsi:
-        if corso.data_inizio.tzinfo is not None:
-            corso.data_inizio = corso.data_inizio.replace(tzinfo=None)
-        if corso.data_fine.tzinfo is not None:
-            corso.data_fine = corso.data_fine.replace(tzinfo=None)
-    
-    return render_template('admin/corsi.html', corsi=corsi, now=now)
+    return render_template('admin/corsi.html', 
+                         corsi=corsi, 
+                         docenti=docenti, 
+                         progetti=progetti,
+                         now=now)
 
 @app.route('/admin/corsi/<int:corso_id>')
 @login_required
@@ -1868,20 +1911,22 @@ def admin_nuovo_attestato():
             
             # Generate the PDF
             generate_attestato_pdf(
-            file_path,
-            discente.nome,
-            discente.cognome,
-            discente.codice_fiscale or "N/A",
-            discente.unita_org or "N/A",  # Using unita_org as Comune di appartenenza
-            corso.titolo,
-            f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
-            valutazione,
-            corso.progetto.titolo if corso.progetto else "N/A",
-            corso.modalita  # Add this line
-        )
-                        # Create attestato record
+                file_path,
+                discente.nome,
+                discente.cognome,
+                discente.codice_fiscale or "N/A",
+                discente.unita_org or "N/A",
+                corso.titolo,
+                f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
+                valutazione,
+                corso.progetto.titolo if corso.progetto else "N/A",
+                corso.modalita
+            )
+            
+            # Create attestato record
             attestato = Attestato(
-                iscrizione_id=iscrizione_id,
+                iscrizione_id=iscrizione.id,
+                corso_id=corso.id,  # Aggiungiamo il corso_id
                 file_path=file_path,
                 data_generazione=datetime.utcnow()
             )
@@ -2013,13 +2058,6 @@ def admin_elimina_attestato(attestato_id):
     
     return redirect(url_for('admin_attestati'))
 
-# Keep the rest of the code as is
-# Move the role_required decorator definition before it's used
-@login_manager.user_loader
-def load_user(user_id):
-    # Replace Query.get() with Session.get()
-    return db.session.get(User, int(user_id))
-
 @app.route('/download/attestato/<int:attestato_id>')
 @login_required
 def download_attestato(attestato_id):
@@ -2107,21 +2145,22 @@ def admin_genera_attestati_automatici():
             
             # Generate the PDF
             generate_attestato_pdf(
-            file_path,
-            discente.nome,
-            discente.cognome,
-            discente.codice_fiscale or "N/A",
-            discente.unita_org or "N/A",
-            corso.titolo,
-            f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
-            valutazione,
-            corso.progetto.titolo if corso.progetto else "N/A",
-            corso.modalita  # Add this line
+                file_path,
+                discente.nome,
+                discente.cognome,
+                discente.codice_fiscale or "N/A",
+                discente.unita_org or "N/A",
+                corso.titolo,
+                f"{iscrizione.ore_frequentate}/{corso.ore_totali}",
+                valutazione,
+                corso.progetto.titolo if corso.progetto else "N/A",
+                corso.modalita
             )
             
             # Create attestato record
             attestato = Attestato(
                 iscrizione_id=iscrizione.id,
+                corso_id=corso.id,  # Aggiungiamo il corso_id
                 file_path=file_path,
                 data_generazione=datetime.utcnow()
             )
@@ -2636,7 +2675,7 @@ def admin_report_export_pdf():
 @role_required(['discente'])
 def discente_dashboard():
     # Get current date for comparisons
-    now = datetime.utcnow()
+    now = datetime.now().date()  # Convertiamo in date per il confronto
     
     # Get user's enrollments
     iscrizioni = Iscrizione.query.filter_by(discente_id=current_user.id).all()
@@ -2644,10 +2683,7 @@ def discente_dashboard():
     # Get user's certificates
     attestati = Attestato.query.join(Iscrizione).filter(Iscrizione.discente_id == current_user.id).all()
     
-    # Get current time without timezone
-    now = datetime.now()
-    
-    # Count completed courses without timezone manipulation
+    # Count completed courses
     corsi_completati = sum(1 for i in iscrizioni if i.corso_ref is not None and i.corso_ref.data_fine < now)
     
     return render_template('discente/dashboard.html', 
@@ -4033,18 +4069,188 @@ models = {
 # Initialize the routes with the Flask app and other required objects
 progetti.init_routes(app, db, role_required, models)
 
-# Make sure this is at the very end of your file
+@app.route('/attestati-pubblici/<token>')
+def download_attestato_public(token):
+    try:
+        attestato = Attestato.query.filter_by(public_token=token).first_or_404()
+        
+        # Verifica che il file esista
+        if not os.path.exists(attestato.file_path):
+            flash('File non trovato', 'danger')
+            return redirect(url_for('index'))
+            
+        return send_file(
+            attestato.file_path,
+            as_attachment=True,
+            download_name=f"attestato_{attestato.discente.cognome}_{attestato.discente.nome}.pdf"
+        )
+        
+    except Exception as e:
+        flash(f'Errore durante il download: {str(e)}', 'danger')
+        return redirect(url_for('index'))
+
+@app.route('/admin/attestati/genera-csv-badge')
+@login_required
+@role_required(['admin'])
+def genera_csv_badge():
+    if current_user.role != 'admin':
+        flash('Accesso non autorizzato', 'danger')
+        return redirect(url_for('login'))
+    
+    try:
+        # Ottieni tutti gli attestati non ancora esportati
+        attestati = Attestato.query.filter_by(badge_exported=False).all()
+        
+        if not attestati:
+            flash('Nessun attestato da esportare', 'warning')
+            return redirect(url_for('admin_attestati'))
+        
+        # Prepara i dati per la visualizzazione
+        attestati_data = []
+        for attestato in attestati:
+            iscrizione = attestato.iscrizione
+            discente = iscrizione.discente
+            corso = attestato.corso
+            
+            attestati_data.append({
+                'id': attestato.id,
+                'discente_nome': f"{discente.cognome} {discente.nome}",
+                'discente_email': discente.email,
+                'corso_titolo': corso.titolo,
+                'data_generazione': attestato.data_generazione.strftime('%d/%m/%Y')
+            })
+        
+        return render_template('admin/genera_csv_badge.html', 
+                            attestati=attestati_data,
+                            count=len(attestati))
+        
+    except Exception as e:
+        flash(f'Errore durante la preparazione del CSV: {str(e)}', 'danger')
+        return redirect(url_for('admin_attestati'))
+
+@app.route('/admin/attestati/export-csv-badge', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def export_csv_badge():
+    try:
+        # Ottieni tutti gli attestati non ancora esportati
+        attestati = Attestato.query.filter_by(badge_exported=False).all()
+        
+        if not attestati:
+            flash('Nessun attestato da esportare', 'warning')
+            return redirect(url_for('admin_attestati'))
+        
+        # Crea il CSV in memoria
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Intestazione del CSV con tutte le colonne richieste
+        writer.writerow([
+            'Recipient Full Name',
+            'First Name',
+            'Last Name',
+            'Identifier',
+            'Name and Email',
+            'email',
+            'name',
+            'evidence_url',
+            'badge_name',
+            'badge_description'
+        ])
+        
+        # Genera un token unico per ogni attestato e aggiungi i dati al CSV
+        for attestato in attestati:
+            # Genera un token unico per l'attestato
+            token = secrets.token_urlsafe(32)
+            attestato.public_token = token
+            attestato.badge_exported = True
+            
+            # Costruisci l'URL pubblico dell'attestato
+            evidence_url = url_for('download_attestato_public', token=token, _external=True)
+            
+            # Ottieni il discente attraverso l'iscrizione
+            iscrizione = attestato.iscrizione
+            discente = iscrizione.discente
+            
+            # Aggiungi la riga al CSV con tutte le informazioni richieste
+            writer.writerow([
+                f"{discente.cognome} {discente.nome}",  # Recipient Full Name
+                discente.nome,  # First Name
+                discente.cognome,  # Last Name
+                discente.codice_fiscale or discente.email,  # Identifier (usiamo il CF o l'email)
+                f"{discente.cognome} {discente.nome} <{discente.email}>",  # Name and Email
+                discente.email,  # email
+                f"{discente.cognome} {discente.nome}",  # name
+                evidence_url,  # evidence_url
+                f"Attestato {attestato.corso.titolo}",  # badge_name
+                f"Attestato di completamento del corso {attestato.corso.titolo}"  # badge_description
+            ])
+        
+        # Salva i cambiamenti nel database
+        db.session.commit()
+        
+        # Prepara il file CSV per il download
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='badges_export.csv'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore durante la generazione del CSV: {str(e)}', 'danger')
+        return redirect(url_for('admin_attestati'))
+
+# ... rest of the code ...
+
 if __name__ == '__main__':
-    # Assicurati che la cartella uploads esista
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
-    
-    # Inizializza il database solo se necessario (prima esecuzione o dopo modifiche ai modelli)
-    # Puoi commentare questa parte dopo la prima esecuzione
-    # with app.app_context():
-    #     db.create_all()  # Create all tables
-    
-    # Avvia l'app in modalità debug
+    with app.app_context():
+        db.create_all()  # Crea tutte le tabelle se non esistono
     app.run(debug=True)
+
+@app.route('/admin/progetti/crea', methods=['GET', 'POST'])
+@login_required
+@role_required(['admin'])
+def admin_crea_progetto_post():
+    if request.method == 'POST':
+        titolo = request.form.get('titolo')
+        descrizione = request.form.get('descrizione')
+        data_inizio = datetime.strptime(request.form.get('data_inizio'), '%Y-%m-%d')
+        data_fine = datetime.strptime(request.form.get('data_fine'), '%Y-%m-%d')
+        budget = float(request.form.get('budget', 0))
+        link_corso = request.form.get('link_corso')
+        
+        progetto = Progetto(
+            titolo=titolo,
+            descrizione=descrizione,
+            data_inizio=data_inizio,
+            data_fine=data_fine,
+            budget=budget,
+            link_corso=link_corso
+        )
+        
+        db.session.add(progetto)
+        db.session.commit()
+        
+        flash('Progetto creato con successo', 'success')
+        return redirect(url_for('admin_progetti'))
+    
+    return render_template('admin/nuovo_progetto.html')
+
+@app.cli.command('db-migrate')
+def db_migrate():
+    """Esegue la migrazione del database"""
+    try:
+        from migrations.disponibilita import upgrade
+        upgrade()
+        print("Migrazione completata con successo!")
+    except Exception as e:
+        print(f"Errore durante la migrazione: {str(e)}")
+        
+# ...existing code
+
+app.register_blueprint(calendario_bp)
 
 

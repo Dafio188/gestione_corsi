@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Nuova Disponibilità</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('disponibilita.docente_nuova_disponibilita') }}">
+                {{ form.hidden_tag() }}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        {{ form.data.label(class="form-label") }}
+                        {{ form.data(class="form-control") }}
+                        {% if form.data.errors %}
+                            <div class="text-danger">
+                                {% for error in form.data.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.ora_inizio.label(class="form-label") }}
+                        {{ form.ora_inizio(class="form-control") }}
+                        {% if form.ora_inizio.errors %}
+                            <div class="text-danger">
+                                {% for error in form.ora_inizio.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.ora_fine.label(class="form-label") }}
+                        {{ form.ora_fine(class="form-control") }}
+                        {% if form.ora_fine.errors %}
+                            <div class="text-danger">
+                                {% for error in form.ora_fine.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.note.label(class="form-label") }}
+                    {{ form.note(class="form-control", rows="3") }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.stato.label(class="form-label") }}
+                    {{ form.stato(class="form-select") }}
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('disponibilita.docente_disponibilita') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Indietro
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salva Disponibilità
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

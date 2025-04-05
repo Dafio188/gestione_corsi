@@ -1,32 +1,74 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Docente - Gestione Corsi PNRR{% endblock %}
+{% block title %}Dashboard Docente{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+.card-body .stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.card-body .stats i {
+    font-size: 2.5rem;
+}
+.card-body .stats .number {
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1;
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Dashboard Docente</h1>
-    
-    <div class="jumbotron bg-light p-4 mb-4 rounded">
-        <h2>Benvenuto, {{ current_user.nome }} {{ current_user.cognome }}</h2>
-        <p>Questa è la dashboard per i docenti.</p>
-    </div>
-    
+    <h1 class="mb-4">Benvenuto, {{ current_user.nome }} {{ current_user.cognome }}</h1>
+    <p class="text-muted">Questa è la dashboard per i docenti.</p>
+
     <div class="row">
-        <div class="col-md-6 mb-4">
+        <div class="col-md-4 mb-4">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title">I miei Corsi</h5>
-                    <p class="card-text display-4">{{ corsi_count }}</p>
-                    <a href="{{ url_for('docente_corsi') }}" class="btn btn-light">Visualizza</a>
+                    <div class="stats">
+                        <i class="fas fa-book"></i>
+                        <span class="number">{{ corsi_count if corsi_count is defined else 0 }}</span>
+                    </div>
+                    <a href="{{ url_for('docente_corsi') }}" class="btn btn-light">
+                        <i class="fas fa-eye me-2"></i>Visualizza
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-4">
+
+        <div class="col-md-4 mb-4">
+            <div class="card text-white h-100" style="background-color: #6610f2;">
+                <div class="card-body">
+                    <h5 class="card-title">Le mie Disponibilità</h5>
+                    <div class="stats">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span class="number">{{ disponibilita_count if disponibilita_count is defined else 0 }}</span>
+                    </div>
+                    <a href="{{ url_for('disponibilita.docente_disponibilita') }}" class="btn btn-light">
+                        <i class="fas fa-cog me-2"></i>Gestisci
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
             <div class="card bg-info text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title">Note e Appunti</h5>
-                    <p class="card-text"><i class="bi bi-journal-text display-4"></i></p>
-                    <a href="{{ url_for('docente_note') }}" class="btn btn-light">Gestisci</a>
+                    <div class="stats">
+                        <i class="fas fa-sticky-note"></i>
+                        <span class="number">{{ note_count if note_count is defined else 0 }}</span>
+                    </div>
+                    <a href="{{ url_for('docente_note') }}" class="btn btn-light">
+                        <i class="fas fa-edit me-2"></i>Gestisci
+                    </a>
                 </div>
             </div>
         </div>
@@ -41,7 +83,9 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ corso.titolo }}</h5>
                     <p class="card-text">{{ corso.descrizione|truncate(100) }}</p>
-                    <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary">Dettagli</a>
+                    <a href="{{ url_for('docente_dettaglio_corso', corso_id=corso.id) }}" class="btn btn-primary">
+                        <i class="fas fa-info-circle me-2"></i>Dettagli
+                    </a>
                 </div>
             </div>
         </div>
