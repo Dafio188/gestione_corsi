@@ -1,0 +1,43 @@
+Perfetto, ricapitoliamo il processo completo per la generazione del file CSV per Badgr:
+Punto di Partenza:
+Abbiamo già la pagina /admin/attestati che mostra tutti gli attestati
+Gli attestati vengono generati solo per chi ha:
+100% di frequenza
+≥85% nel test finale
+Cosa Dobbiamo Fare:
+Aggiungere un pulsante "Genera CSV per Badge" nella pagina degli attestati
+Il CSV deve contenere le seguenti colonne:
+
+     - Identifier (email del discente)
+     - First Name (nome del discente)
+     - Last Name (cognome del discente)
+     - Narrative (descrizione del completamento corso)
+     - Evidence Narrative (descrizione dell'attestato)
+     - Evidence URL (link all'attestato PDF)
+     - Issue Date (data di generazione attestato)
+     - Expiration Date (vuoto)
+
+
+Modifiche Necessarie:
+Nel Database (models.py):
+Aggiungere campo badge_exported = db.Column(db.Boolean, default=False) alla tabella Attestato
+Nel Template (templates/admin/attestati.html):
+Aggiungere il pulsante "Genera CSV per Badge" accanto a "Genera Attestati Automatici"
+Nuova Route (run.py):
+Aggiungere la route /admin/attestati/genera-csv-badge
+La route raccoglierà tutti gli attestati non esportati
+Genererà il CSV nel formato richiesto da Badgr
+Marcherà gli attestati come esportati
+Processo di Utilizzo:
+L'admin genera gli attestati con il pulsante esistente
+Clicca su "Genera CSV per Badge"
+Scarica il file CSV
+Importa il CSV su Badgr (https://eu.badgr.com/issuers)
+Vuoi che procediamo con l'implementazione? Da quale punto preferisci iniziare?nalità oltre a quelle discusse?
+
+Vuoi procedere con l'implementazione? Possiamo:
+Creare prima il modello del database
+Implementare le rotte base
+Creare l'interfaccia per i docenti
+Aggiungere la vista per l'utente master
+Implementare l'export del calendario

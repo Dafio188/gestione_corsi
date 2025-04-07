@@ -1,0 +1,132 @@
+Nome del Comune	Email Ufficio Personale	Nome del Responsabile Ufficio Personale	Telefono Ufficio Personale
+Nocera Terinese	risorseumane@comune.noceraterinese.cz.it	FUNARO Cristina Anna Cinzia	0968.91300
+Torre di Ruggero	Informazioni non disponibili	Informazioni non disponibili	096793112
+Pentone	Informazioni non disponibili	Informazioni non disponibili	Informazioni non disponibili
+Altilia	Informazioni non disponibili	Informazioni non disponibili	0984 96 40 94
+San Pietro a Maida	Informazioni non disponibili	Informazioni non disponibili	096879111
+Feroleto Antico	segretario.feroletoantico@asmepec.it	Informazioni non disponibili	0968 425834
+Lamezia Terme	Informazioni non disponibili	Informazioni non disponibili	0968.2071
+Amato	protocollo.amato@asmepec.it	Informazioni non disponibili	0961 068085
+Calopezzati	Informazioni non disponibili	Informazioni non disponibili	0983 47245
+Cicala	Informazioni non disponibili	Informazioni non disponibili	Informazioni non disponibili
+Amantea	urp@comune.amantea.cs.it	Informazioni non disponibili	0982 4291
+Pianopoli	protocollo@comune.pianopoli.cz.it	Informazioni non disponibili	0968.32071
+Platania	Informazioni non disponibili	Informazioni non disponibili	0968.205010
+Dipignano	protocollo.dipignano@asmepec.it	Informazioni non disponibili	0984 621006
+Belmonte Calabro	Informazioni non disponibili	Informazioni non disponibili	0982 400207
+Sellia Marina	sindaco.selliamarina@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+Martirano Lombardo	protocollo.comunemartiranolombardo@asmepec.it	Informazioni non disponibili	096899034
+Decollatura	servizigenerali@pec.comune.decollatura.cz.it	Informazioni non disponibili	0968 61169
+Cropani	protocollo@comune.cropani.cz.it	Informazioni non disponibili	0961 557636
+Squillace	protocollo.squillace@asmepec.it	Informazioni non disponibili	0961914020
+Aieta	sindaco.comune.aieta@asmepec.it	Informazioni non disponibili	0985 71016
+Curinga	protocollo@pec.comune.curinga.cz.it	Informazioni non disponibili	0968-739311
+San Pietro Apostolo	protocollo.sanpietroapostolo@asmepec.it	Informazioni non disponibili	0961-994035
+Serrastretta	sindaco.serrastretta@asmepec.it	Informazioni non disponibili	0968-81001
+Canna	protocollo.canna@asmepec.it	Informazioni non disponibili	0981-934000
+Caraffa di Catanzaro	protocollo.caraffacz@asmepec.it	Informazioni non disponibili	0961.957811
+Maida	areamministrativa.maida@asmepec.it	Informazioni non disponibili	0968-751869
+Cenadi	comune.cenadi@asmepec.it	Informazioni non disponibili	0967 955105
+San Floro	sindaco.sanfloro@asmepec.it	Informazioni non disponibili	0961-050253
+Settingiano	sindaco.settingiano@asmepec.it	Informazioni non disponibili	0961.997031
+Simeri Crichi	protocollocomunesimericrichi@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+Belcastro	protocollo.belcastro@asmepec.it	Informazioni non disponibili	0961 932090
+Girifalco	protocollo.girifalco@asmepec.it	Dott.ssa Elisabetta Vinci	0968749017
+Soveria Simeri	areaamministrativa.soveriasimeri@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+Belvedere Marittimo	belvederemarittimo.cs.segreteria@pec.it	Informazioni non disponibili	0985 887411
+Casali del Manco	comune.casalidelmanco@asmepec.it	Informazioni non disponibili	0984 432003
+Curinga	protocollo@pec.comune.curinga.cz.it	Informazioni non disponibili	0968-739311
+San Pietro Apostolo	protocollo.sanpietroapostolo@asmepec.it	Informazioni non disponibili	0961-994035
+Sersale	sindaco.sersale@asmepec.it	Informazioni non disponibili	0961/930911
+Caraffa di Catanzaro	protocollo.caraffacz@asmepec.it	Informazioni non disponibili	0961.957811
+Sellia	protocollosellia@asmepec.it	Informazioni non disponibili	0961-483049
+Martirano	segreteria.martirano@asmepec.it	Informazioni non disponibili	0968/99034
+San Sostene	prot.sansostene@asmepec.it	Informazioni non disponibili	0967/533254
+San Vito sullo Ionio	elettorale.sanvitosulloionio@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+Martirano Lombardo	protocollo.comunemartiranolombardo@asmepec.it	Informazioni non disponibili	096899034
+Miglierina	sindaco.miglierina@asmepec.it	Informazioni non disponibili	0961/930911
+Cropani	demografici.cropani@asmepec.it	Informazioni non disponibili	0961 557636
+Olivadi	comune.olivadi@asmepec.it	Informazioni non disponibili	(+39) 0967633077
+Bocchigliero	sindaco.bocchigliero@asmepec.it	Informazioni non disponibili	0983-92001
+Cicala	sindaco.cicala@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+Maierà	amministrativo.maiera@asmepec.it	Informazioni non disponibili	Informazioni non disponibili
+San Mango d'Aquino	protocollo@pec.comunedisanmangodaquino.it	Informazioni non disponibili	0968-96003
+Amendolara	comuneamendolarasegr@pcert.postecert.it	Informazioni non disponibili	0981-911050
+Aiello Calabro	sindaco@pec.comune.aiellocalabro.cs.it	Informazioni non disponibili	0982-43663
+Cropalati	[indirizzo email rimosso]	Informazioni non disponibili	0983 61064
+Cerisano	protocollo.comune.cerisano@asmepec.it	Informazioni non disponibili	0984 473005
+Domanico	comunedomanico@pec.it	Informazioni non disponibili	0984 633005
+Fagnano Castello	protocollo@pec.comune.fagnanocastello.cs.it	Informazioni non disponibili	0984525105
+Lattarico	protocollo.lattarico@asmepec.it	Informazioni non disponibili	0984 933391
+Longobucco	segreteria@pec.comunelongobucco.eu	Informazioni non disponibili	0983 72505
+Malito	protocollo.malito@asmepec.it	Informazioni non disponibili	0984 968005
+Malvito	suap.malvito@pec.calabriasuap.it	Informazioni non disponibili	0984509007
+Marano Marchesato	protocollo@pec.comune.maranomarchesato.cs.it	Informazioni non disponibili	0984 641048 - 0984 641609
+Marano Principato	protocollo.maranoprincipato@pec.it	Informazioni non disponibili	0984.857875 - 0984.858173
+Marzi	protoc.marzi@asmepec.it	Informazioni non disponibili	0984 961208
+Mendicino	comunemendicino@mailcertificata.biz	Informazioni non disponibili	0984 638911
+Mongrassano	protocollomongrassano@asmepec.it	Informazioni non disponibili	0984.527209
+Montalto Uffugo	protocollo.montaltouffugo@certificatamail.it	Informazioni non disponibili	0984 932870
+Montegiordano	sindaco.montegiordano.cs@legalmail.it	Informazioni non disponibili	0981 932002
+Morano Calabro	info@pec.comunemoranocalabro.it	Informazioni non disponibili	0981 31021
+Mormanno	protocollo.mormanno@asmepec.it	Informazioni non disponibili	0981 81008/9
+Mottafollone	protocollo.mottafollone@pec.it	Informazioni non disponibili	0981 68088
+Nocara	[indirizzo email rimosso]	Informazioni non disponibili	0981-934442
+Oriolo	info.comune.oriolo.cs@legalmail.it	Informazioni non disponibili	0981-930871
+Paludi	protocollogenerale.paludi@asmepec.it	Informazioni non disponibili	0983 62029
+Panettieri	[indirizzo email rimosso]	Informazioni non disponibili	0968-82018
+Papasidero	comune.papasidero@pec.it	Informazioni non disponibili	0981 83078
+Parenti	affarigenerali.parenti@asmepec.it	Informazioni non disponibili	0984-966105
+Paterno Calabro	protocollo.paternocalabro@asmepec.it	Informazioni non disponibili	0984 476031
+Pedace	anagrafe@comune.pedace.cs.it	Informazioni non disponibili	Informazioni non disponibili
+Pedivigliano	protocollo.pedivigliano@asmepec.it	Informazioni non disponibili	0984-966105
+Piane Crati	segreteria@comunedipianecrati.it	Informazioni non disponibili	0984-422002
+Pietrafitta	comune.pietrafitta.cs@pec.it	Informazioni non disponibili	0984 424021
+Pietrapaola	protocollogenerale.pietrapaola@asmepec.it	Informazioni non disponibili	0983994013
+Praia a Mare	protocollo.praia@asmepec.it	Informazioni non disponibili	0985 72353
+Rende	protocollo.rende@asmepec.it	Informazioni non disponibili	0984 8284
+Rocca Imperiale	comuneroccaimperiale.segreteria@postecert.it	Informazioni non disponibili	0981-936391
+Roggiano Gravina	protocollo@pec.comune.roggianogravina.cs.it	Informazioni non disponibili	0984 501328
+Rogliano	protocollo.rogliano@asmepec.it	Informazioni non disponibili	0984/961001
+Rose	protocollo.comune.rose.cs@pec.it	Informazioni non disponibili	0984 901141
+Roseto Capo Spulico	segreteria.comunerosetocs@asmepec.it	Informazioni non disponibili	0981-913341
+Rota Greca	comunerotagreca@asmepec.it	Informazioni non disponibili	0984928879
+Rovito	protocollo.rovito@asmepec.it	Informazioni non disponibili	0984 433003
+San Basile	[indirizzo email rimosso]	Informazioni non disponibili	Informazioni non disponibili
+San Demetrio Corone	[indirizzo email rimosso]	Informazioni non disponibili	0984-558002
+San Fili	[indirizzo email rimosso]	Informazioni non disponibili	0984-651003
+San Giorgio Albanese	[indirizzo email rimosso]	Informazioni non disponibili	0981-956001
+San Giovanni in Fiore	[indirizzo email rimosso]	Informazioni non disponibili	0984-997001
+San Lorenzo Bellizzi	[indirizzo email rimosso]	Informazioni non disponibili	0981-820011
+San Lorenzo del Vallo	[indirizzo email rimosso]	Informazioni non disponibili	0981-320005
+San Lucido	[indirizzo email rimosso]	Informazioni non disponibili	0982-85004
+San Marco Argentano	[indirizzo email rimosso]	Informazioni non disponibili	0984-51005
+San Martino di Finita	[indirizzo email rimosso]	Informazioni non disponibili	0984-505001
+San Nicola Arcella	[indirizzo email rimosso]	Informazioni non disponibili	0985-877007
+San Pietro in Amantea	[indirizzo email rimosso]	Informazioni non disponibili	0982-450001
+San Pietro in Guarano	[indirizzo email rimosso]	Informazioni non disponibili	0984-471006
+San Sosti	[indirizzo email rimosso]	Informazioni non disponibili	0981-83005
+San Vincenzo La Costa	[indirizzo email rimosso]	Informazioni non disponibili	0982-850005
+Sangineto	[indirizzo email rimosso]	Informazioni non disponibili	0982-88004
+Santa Caterina Albanese	[indirizzo email rimosso]	Informazioni non disponibili	0984-521003
+Santa Domenica Talao	[indirizzo email rimosso]	Informazioni non disponibili	0985-870001
+Santa Maria del Cedro	[indirizzo email rimosso]	Informazioni non disponibili	0985-85002
+Santa Sofia d'Epiro	[indirizzo email rimosso]	Informazioni non disponibili	0981-940005
+Santo Stefano di Rogliano	protocollo.comune.sstefanorogliano@asmepec.it	Informazioni non disponibili	0984 969141
+Saracena	[indirizzo email rimosso]	Informazioni non disponibili	0981-31005
+Scala Coeli	[indirizzo email rimosso]	Informazioni non disponibili	0983-53001
+Scalea	[indirizzo email rimosso]	Informazioni non disponibili	0985-90007
+Scigliano	[indirizzo email rimosso]	Informazioni non disponibili	0984-963005
+Serra d'Aiello	protocollo.serraaiello@asmepec.it	Informazioni non disponibili	0982-75005
+Spezzano Albanese	[indirizzo email rimosso]	Informazioni non disponibili	0981-320001
+Spezzano della Sila	[indirizzo email rimosso]	Informazioni non disponibili	0984-472001
+Tarsia	[indirizzo email rimosso]	Informazioni non disponibili	0981-940001
+Terranova da Sibari	[indirizzo email rimosso]	Informazioni non disponibili	0981-930001
+Terravecchia	[indirizzo email rimosso]	Informazioni non disponibili	0983-61001
+Torano Castello	[indirizzo email rimosso]	Informazioni non disponibili	0981-51005
+Tortora	[indirizzo email rimosso]	Informazioni non disponibili	0985-76007
+Trebisacce	[indirizzo email rimosso]	Informazioni non disponibili	0981-78001
+Vaccarizzo Albanese	[indirizzo email rimosso]	Informazioni non disponibili	0983-64001
+Verbicaro	[indirizzo email rimosso]	Informazioni non disponibili	0985-83004
+Villapiana	[indirizzo email rimosso]	Informazioni non disponibili	0981-58005
+Zumpano	[indirizzo email rimosso]	Informazioni non disponibili	0984-471001

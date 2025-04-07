@@ -93,3 +93,24 @@ if __name__ == '__main__':
         else:
             print(f"Unknown command: {command}")
             print("Available commands: init, migrate, upgrade, revision, heads, current, reset")
+
+conn = sqlite3.connect('gestione_corsi.db')
+cursor = conn.cursor()
+cursor.execute('DROP TABLE IF EXISTS disponibilita_docente;')
+cursor.execute('''
+CREATE TABLE disponibilita_docente (
+    id INTEGER PRIMARY KEY,
+    docente_id INTEGER NOT NULL,
+    data DATE NOT NULL,
+    ora_inizio TIME NOT NULL,
+    ora_fine TIME NOT NULL,
+    corso_id INTEGER,
+    note TEXT,
+    stato VARCHAR(20) DEFAULT 'disponibile',
+    FOREIGN KEY (docente_id) REFERENCES user (id),
+    FOREIGN KEY (corso_id) REFERENCES corso (id)
+);
+''')
+conn.commit()
+conn.close()
+print('Tabella disponibilita_docente ricreata con successo!')

@@ -12,7 +12,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Import models to ensure they're registered with SQLAlchemy
-from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato
+from models import Progetto, User, Corso, Iscrizione, Test, Nota, RisultatoTest, Attestato, Evento
 
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
